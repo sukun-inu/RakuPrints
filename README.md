@@ -1,6 +1,6 @@
 # らーく印刷 - 仕様書 & 説明書
 
-![アプリアイコン](./assets/icon.png)
+![アプリアイコン](https://raw.githubusercontent.com/sukun-inu/RakuPrints/refs/heads/main/assets/icon.png)
 
 ## アプリケーション概要
 らーく印刷は、複数のドキュメント形式（Excel、Word、PDF、PowerPoint）を効率的に印刷するためのデスクトップアプリケーションです。印刷ジョブの管理や設定のカスタマイズを簡単に行えるよう設計されています。
