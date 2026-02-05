@@ -1,0 +1,291 @@
+2026-02-05 23:22:32,058 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\返金証明書_20250815.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-05 23:22:40,084 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\20251031_SYCS_Battery Replacement Agreement and Estimate.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-05 23:22:45,811 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\個人情報の取り扱いについて.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-05 23:44:31,126 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\返金証明書_20250815.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-05 23:44:47,446 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\20251031_SYCS_Battery Replacement Agreement and Estimate.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-05 23:44:54,901 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\1.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-05 23:44:54,902 [ERROR] app.controller.job_executor: Print failed for C:\Users\Kawasaki\Desktop\1.pdf
+Traceback (most recent call last):
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\controller\job_executor.py", line 63, in run
+    backend.print(job)
+    ~~~~~~~~~~~~~^^^^^
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\backend\pdf_backend.py", line 17, in print
+    raise RuntimeError("SumatraPDF が見つかりません。設定を確認してください。")
+RuntimeError: SumatraPDF が見つかりません。設定を確認してください。
+2026-02-05 23:44:54,914 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\2.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-05 23:44:54,914 [ERROR] app.controller.job_executor: Print failed for C:\Users\Kawasaki\Desktop\2.pdf
+Traceback (most recent call last):
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\controller\job_executor.py", line 63, in run
+    backend.print(job)
+    ~~~~~~~~~~~~~^^^^^
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\backend\pdf_backend.py", line 17, in print
+    raise RuntimeError("SumatraPDF が見つかりません。設定を確認してください。")
+RuntimeError: SumatraPDF が見つかりません。設定を確認してください。
+2026-02-05 23:44:54,925 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\3.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-05 23:44:54,925 [ERROR] app.controller.job_executor: Print failed for C:\Users\Kawasaki\Desktop\3.pdf
+Traceback (most recent call last):
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\controller\job_executor.py", line 63, in run
+    backend.print(job)
+    ~~~~~~~~~~~~~^^^^^
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\backend\pdf_backend.py", line 17, in print
+    raise RuntimeError("SumatraPDF が見つかりません。設定を確認してください。")
+RuntimeError: SumatraPDF が見つかりません。設定を確認してください。
+2026-02-05 23:44:54,927 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\個人情報の取り扱いについて.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-05 23:48:05,730 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\1.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-05 23:48:05,730 [ERROR] app.controller.job_executor: Print failed for C:\Users\Kawasaki\Desktop\1.pdf
+Traceback (most recent call last):
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\controller\job_executor.py", line 63, in run
+    backend.print(job)
+    ~~~~~~~~~~~~~^^^^^
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\backend\pdf_backend.py", line 17, in print
+RuntimeError: SumatraPDF が見つかりません。設定を確認してください。
+2026-02-05 23:48:05,740 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\2.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-05 23:48:05,741 [ERROR] app.controller.job_executor: Print failed for C:\Users\Kawasaki\Desktop\2.pdf
+Traceback (most recent call last):
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\controller\job_executor.py", line 63, in run
+    backend.print(job)
+    ~~~~~~~~~~~~~^^^^^
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\backend\pdf_backend.py", line 17, in print
+RuntimeError: SumatraPDF が見つかりません。設定を確認してください。
+2026-02-05 23:48:05,742 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\3.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-05 23:48:05,742 [ERROR] app.controller.job_executor: Print failed for C:\Users\Kawasaki\Desktop\3.pdf
+Traceback (most recent call last):
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\controller\job_executor.py", line 63, in run
+    backend.print(job)
+    ~~~~~~~~~~~~~^^^^^
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\backend\pdf_backend.py", line 17, in print
+RuntimeError: SumatraPDF が見つかりません。設定を確認してください。
+2026-02-05 23:50:12,333 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\1.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-05 23:50:12,334 [ERROR] app.controller.job_executor: Print failed for C:\Users\Kawasaki\Desktop\1.pdf
+Traceback (most recent call last):
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\controller\job_executor.py", line 63, in run
+    backend.print(job)
+    ~~~~~~~~~~~~~^^^^^
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\backend\pdf_backend.py", line 17, in print
+RuntimeError: SumatraPDF が見つかりません。設定を確認してください。
+2026-02-05 23:50:12,335 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\2.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-05 23:50:12,335 [ERROR] app.controller.job_executor: Print failed for C:\Users\Kawasaki\Desktop\2.pdf
+Traceback (most recent call last):
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\controller\job_executor.py", line 63, in run
+    backend.print(job)
+    ~~~~~~~~~~~~~^^^^^
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\backend\pdf_backend.py", line 17, in print
+RuntimeError: SumatraPDF が見つかりません。設定を確認してください。
+2026-02-05 23:50:12,336 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\3.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-05 23:50:12,337 [ERROR] app.controller.job_executor: Print failed for C:\Users\Kawasaki\Desktop\3.pdf
+Traceback (most recent call last):
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\controller\job_executor.py", line 63, in run
+    backend.print(job)
+    ~~~~~~~~~~~~~^^^^^
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\backend\pdf_backend.py", line 17, in print
+RuntimeError: SumatraPDF が見つかりません。設定を確認してください。
+2026-02-06 00:13:11,645 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\1.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:14:11,673 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\2.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:15:11,892 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\3.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:15:12,271 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\個人情報の取り扱いについて.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:15:32,879 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\返金証明書_20250815.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:15:42,491 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\20251031_SYCS_Battery Replacement Agreement and Estimate.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:40:32,335 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\20251031_SYCS_Battery Replacement Agreement and Estimate.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:40:41,583 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\個人情報の取り扱いについて.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:40:51,002 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\返金証明書_20250815.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:40:58,441 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\1.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:41:07,898 [ERROR] app.controller.job_executor: Print failed for C:\Users\Kawasaki\Desktop\1.pdf
+Traceback (most recent call last):
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\backend\pdf_backend.py", line 64, in print
+    scaled = image.scaled(
+        page_rect.size(),
+        QtCore.Qt.KeepAspectRatio,
+        QtCore.Qt.SmoothTransformation,
+    )
+TypeError: 'PySide6.QtGui.QImage.scaled' called with wrong argument types:
+  PySide6.QtGui.QImage.scaled(QSizeF, AspectRatioMode, TransformationMode)
+Supported signatures:
+  PySide6.QtGui.QImage.scaled(s: PySide6.QtCore.QSize, /, aspectMode: PySide6.QtCore.Qt.AspectRatioMode = Instance(Qt.IgnoreAspectRatio), mode: PySide6.QtCore.Qt.TransformationMode = Instance(Qt.FastTransformation))
+  PySide6.QtGui.QImage.scaled(w: int, h: int, /, aspectMode: PySide6.QtCore.Qt.AspectRatioMode = Instance(Qt.IgnoreAspectRatio), mode: PySide6.QtCore.Qt.TransformationMode = Instance(Qt.FastTransformation))
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\controller\job_executor.py", line 65, in run
+    backend.print(job)
+    ~~~~~~~~~~~~~^^^^^
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\backend\pdf_backend.py", line 73, in print
+    raise RuntimeError("PDF の印刷に失敗しました。") from exc
+RuntimeError: PDF の印刷に失敗しました。
+2026-02-06 00:41:07,917 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\2.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:44:00,756 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\1.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:44:05,701 [ERROR] app.controller.job_executor: Print failed for C:\Users\Kawasaki\Desktop\1.pdf
+Traceback (most recent call last):
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\controller\job_executor.py", line 65, in run
+    backend.print(job)
+    ~~~~~~~~~~~~~^^^^^
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\backend\pdf_backend.py", line 46, in print
+    raise RuntimeError(message)
+RuntimeError: 'PySide6.QtGui.QImage.scaled' called with wrong argument types:
+  PySide6.QtGui.QImage.scaled(QSizeF, AspectRatioMode, TransformationMode)
+Supported signatures:
+  PySide6.QtGui.QImage.scaled(s: PySide6.QtCore.QSize, /, aspectMode: PySide6.QtCore.Qt.AspectRatioMode = Instance(Qt.IgnoreAspectRatio), mode: PySide6.QtCore.Qt.TransformationMode = Instance(Qt.FastTransformation))
+  PySide6.QtGui.QImage.scaled(w: int, h: int, /, aspectMode: PySide6.QtCore.Qt.AspectRatioMode = Instance(Qt.IgnoreAspectRatio), mode: PySide6.QtCore.Qt.TransformationMode = Instance(Qt.FastTransformation))
+2026-02-06 00:44:05,710 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\2.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:44:10,352 [ERROR] app.controller.job_executor: Print failed for C:\Users\Kawasaki\Desktop\2.pdf
+Traceback (most recent call last):
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\controller\job_executor.py", line 65, in run
+    backend.print(job)
+    ~~~~~~~~~~~~~^^^^^
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\backend\pdf_backend.py", line 46, in print
+    raise RuntimeError(message)
+RuntimeError: 'PySide6.QtGui.QImage.scaled' called with wrong argument types:
+  PySide6.QtGui.QImage.scaled(QSizeF, AspectRatioMode, TransformationMode)
+Supported signatures:
+  PySide6.QtGui.QImage.scaled(s: PySide6.QtCore.QSize, /, aspectMode: PySide6.QtCore.Qt.AspectRatioMode = Instance(Qt.IgnoreAspectRatio), mode: PySide6.QtCore.Qt.TransformationMode = Instance(Qt.FastTransformation))
+  PySide6.QtGui.QImage.scaled(w: int, h: int, /, aspectMode: PySide6.QtCore.Qt.AspectRatioMode = Instance(Qt.IgnoreAspectRatio), mode: PySide6.QtCore.Qt.TransformationMode = Instance(Qt.FastTransformation))
+2026-02-06 00:44:10,354 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\3.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:44:14,573 [ERROR] app.controller.job_executor: Print failed for C:\Users\Kawasaki\Desktop\3.pdf
+Traceback (most recent call last):
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\controller\job_executor.py", line 65, in run
+    backend.print(job)
+    ~~~~~~~~~~~~~^^^^^
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\backend\pdf_backend.py", line 46, in print
+    raise RuntimeError(message)
+RuntimeError: 'PySide6.QtGui.QImage.scaled' called with wrong argument types:
+  PySide6.QtGui.QImage.scaled(QSizeF, AspectRatioMode, TransformationMode)
+Supported signatures:
+  PySide6.QtGui.QImage.scaled(s: PySide6.QtCore.QSize, /, aspectMode: PySide6.QtCore.Qt.AspectRatioMode = Instance(Qt.IgnoreAspectRatio), mode: PySide6.QtCore.Qt.TransformationMode = Instance(Qt.FastTransformation))
+  PySide6.QtGui.QImage.scaled(w: int, h: int, /, aspectMode: PySide6.QtCore.Qt.AspectRatioMode = Instance(Qt.IgnoreAspectRatio), mode: PySide6.QtCore.Qt.TransformationMode = Instance(Qt.FastTransformation))
+2026-02-06 00:44:14,575 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\個人情報の取り扱いについて.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:44:23,406 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\返金証明書_20250815.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:44:33,528 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\20251031_SYCS_Battery Replacement Agreement and Estimate.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:46:31,956 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\1.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:46:38,592 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\2.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:46:45,278 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\3.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:46:51,616 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\個人情報の取り扱いについて.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:46:59,303 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\返金証明書_20250815.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:47:08,606 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\20251031_SYCS_Battery Replacement Agreement and Estimate.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:47:19,455 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\SYCS_20251031_Receipt.xlsx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:47:20,521 [ERROR] app.controller.job_executor: Print failed for C:\Users\Kawasaki\Desktop\SYCS_20251031_Receipt.xlsx
+Traceback (most recent call last):
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\controller\job_executor.py", line 65, in run
+    backend.print(job)
+    ~~~~~~~~~~~~~^^^^^
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\backend\excel_backend.py", line 61, in print
+    app.ActivePrinter = job.printer_name
+    ^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\.venv\Lib\site-packages\win32com\client\dynamic.py", line 677, in __setattr__
+    self._oleobj_.Invoke(entry.dispid, 0, invoke_type, 0, value)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pywintypes.com_error: (-2147352567, '例外が発生しました。', (0, 'Microsoft Excel', 'Application クラスの ActivePrinter プロパティを設定できません。', 'xlmain11.chm', 0, -2146827284), None)
+2026-02-06 00:49:33,009 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\1.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:49:39,430 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\2.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:49:45,735 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\3.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:49:52,026 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\個人情報の取り扱いについて.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:49:59,720 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\返金証明書_20250815.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:50:08,192 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\20251031_SYCS_Battery Replacement Agreement and Estimate.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:50:17,049 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\SYCS_20251031_Receipt.xlsx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 00:50:18,158 [ERROR] app.controller.job_executor: Print failed for C:\Users\Kawasaki\Desktop\SYCS_20251031_Receipt.xlsx
+Traceback (most recent call last):
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\backend\excel_backend.py", line 64, in print
+    app.ActivePrinter = resolved_name
+    ^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\.venv\Lib\site-packages\win32com\client\dynamic.py", line 677, in __setattr__
+    self._oleobj_.Invoke(entry.dispid, 0, invoke_type, 0, value)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pywintypes.com_error: (-2147352567, '例外が発生しました。', (0, 'Microsoft Excel', 'Application クラスの ActivePrinter プロパティを設定できません。', 'xlmain11.chm', 0, -2146827284), None)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\backend\excel_backend.py", line 67, in print
+    app.ActivePrinter = job.printer_name
+    ^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\.venv\Lib\site-packages\win32com\client\dynamic.py", line 657, in __setattr__
+    self._oleobj_.Invoke(entry.dispid, 0, invoke_type, 0, value)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pywintypes.com_error: (-2147352567, '例外が発生しました。', (0, 'Microsoft Excel', 'Application クラスの ActivePrinter プロパティを設定できません。', 'xlmain11.chm', 0, -2146827284), None)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\controller\job_executor.py", line 65, in run
+    backend.print(job)
+    ~~~~~~~~~~~~~^^^^^
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\backend\excel_backend.py", line 69, in print
+    raise RuntimeError(
+        "Excel がプリンターを指定できません。プリンター名を確認してください。"
+    ) from exc
+RuntimeError: Excel がプリンターを指定できません。プリンター名を確認してください。
+2026-02-06 01:00:27,874 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\1.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:00:33,810 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\2.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:00:40,710 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\3.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:00:47,266 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\個人情報の取り扱いについて.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:00:55,350 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\返金証明書_20250815.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:01:02,706 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\20251031_SYCS_Battery Replacement Agreement and Estimate.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:01:10,561 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\SYCS_20251031_Receipt.xlsx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:01:11,665 [ERROR] app.controller.job_executor: Print failed for C:\Users\Kawasaki\Desktop\SYCS_20251031_Receipt.xlsx
+Traceback (most recent call last):
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\controller\job_executor.py", line 65, in run
+    backend.print(job)
+    ~~~~~~~~~~~~~^^^^^
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\backend\excel_backend.py", line 71, in print
+    raise RuntimeError(
+        "Excel がプリンターを指定できません。Excel の既定プリンターに切り替えると印刷できます。"
+    )
+RuntimeError: Excel がプリンターを指定できません。Excel の既定プリンターに切り替えると印刷できます。
+2026-02-06 01:04:25,396 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\1.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:04:31,646 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\2.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:04:39,235 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\3.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:04:46,615 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\個人情報の取り扱いについて.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:04:55,193 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\返金証明書_20250815.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:05:03,312 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\20251031_SYCS_Battery Replacement Agreement and Estimate.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:05:11,170 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\SYCS_20251031_Receipt.xlsx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:22:48,550 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\1.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:23:03,767 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\2.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:23:10,331 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\3.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:23:17,120 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\個人情報の取り扱いについて.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:23:25,092 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\返金証明書_20250815.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:23:34,112 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\20251031_SYCS_Battery Replacement Agreement and Estimate.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:23:41,892 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\SYCS_20251031_Receipt.xlsx | printer=Adobe PDF copies=1 duplex=しない
+2026-02-06 01:23:42,915 [ERROR] app.controller.job_executor: Print failed for C:\Users\Kawasaki\Desktop\SYCS_20251031_Receipt.xlsx
+Traceback (most recent call last):
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\controller\job_executor.py", line 65, in run
+    backend.print(job)
+    ~~~~~~~~~~~~~^^^^^
+  File "C:\Users\Kawasaki\Desktop\Develop\OSS-Print\app\backend\excel_backend.py", line 80, in print
+    raise RuntimeError(
+        "Excel がプリンターを指定できません。Excel の既定プリンターに切り替えると印刷できます。"
+    )
+RuntimeError: Excel がプリンターを指定できません。Excel の既定プリンターに切り替えると印刷できます。
+2026-02-06 01:26:26,970 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\1.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:26:33,115 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\2.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:26:38,879 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\3.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:26:46,512 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\個人情報の取り扱いについて.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:26:54,479 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\返金証明書_20250815.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:26:58,933 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\20251031_SYCS_Battery Replacement Agreement and Estimate.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:27:06,372 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\SYCS_20251031_Receipt.xlsx | printer=Adobe PDF copies=1 duplex=しない
+2026-02-06 01:32:40,249 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\1.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:32:50,855 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\2.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:32:58,491 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\3.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:33:05,976 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\個人情報の取り扱いについて.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:33:14,062 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\返金証明書_20250815.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:33:21,858 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\20251031_SYCS_Battery Replacement Agreement and Estimate.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:33:30,914 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\SYCS_20251031_Receipt.xlsx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:43:40,045 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\1.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:43:49,160 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\2.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:43:56,333 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\3.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:44:09,866 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\個人情報の取り扱いについて.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:44:19,465 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\返金証明書_20250815.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:44:26,340 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\20251031_SYCS_Battery Replacement Agreement and Estimate.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 01:44:33,929 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\SYCS_20251031_Receipt.xlsx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 02:01:25,038 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\1.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 02:01:31,700 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\2.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 02:01:39,322 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\3.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 02:01:46,315 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\個人情報の取り扱いについて.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 02:01:56,054 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\返金証明書_20250815.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 02:02:03,455 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\20251031_SYCS_Battery Replacement Agreement and Estimate.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 02:02:11,147 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\SYCS_20251031_Receipt.xlsx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 02:04:14,179 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\1.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 02:04:21,785 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\2.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 02:04:28,866 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\3.pdf | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 02:04:35,639 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\個人情報の取り扱いについて.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 02:04:43,273 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\返金証明書_20250815.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 02:04:50,119 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\20251031_SYCS_Battery Replacement Agreement and Estimate.docx | printer=Microsoft Print to PDF copies=1 duplex=しない
+2026-02-06 02:04:59,969 [INFO] app.controller.job_executor: Printing C:\Users\Kawasaki\Desktop\SYCS_20251031_Receipt.xlsx | printer=Microsoft Print to PDF copies=1 duplex=しない

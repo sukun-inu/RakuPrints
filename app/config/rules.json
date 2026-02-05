@@ -1,0 +1,26 @@
+{
+  ".pdf": {
+    "printer": ""
+  },
+  ".doc": {
+    "printer": ""
+  },
+  ".docx": {
+    "printer": ""
+  },
+  ".xls": {
+    "printer": ""
+  },
+  ".xlsx": {
+    "printer": ""
+  },
+  ".xlsm": {
+    "printer": ""
+  },
+  ".ppt": {
+    "printer": ""
+  },
+  ".pptx": {
+    "printer": ""
+  }
+}
