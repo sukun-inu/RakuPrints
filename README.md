@@ -149,15 +149,12 @@ python -m PyInstaller RakuPrint.spec --noconfirm
 
 ---
 
-### ライセンス・著作権
-（必要に応じて記載）
+### ライセンス
+MIT License
+詳しくは [LICENSE](LICENSE) をご参照ください。
+Copyright (c) 2026 Hibiki Suzuki
 
 ---
 
 ### 開発・貢献
 Pull Request歓迎。Issueで要望・バグ報告も受付。
-
----
-
-### 作者
-Kawasaki
