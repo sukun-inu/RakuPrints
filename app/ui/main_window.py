@@ -10,6 +10,7 @@ except Exception:  # pragma: no cover - optional on non-Windows
 from app.app_context import AppContext
 from app.controller.job_manager import JobManager
 from app.controller.job_executor import JobExecutor
+from app.controller.update_manager import UpdateManager
 from app.model.print_job import DuplexMode, JobStatus, FileType
 from app.backend.printer_utils import (
     list_printers,
@@ -27,6 +28,7 @@ from app.ui.theme import apply_theme
 from app.ui.excel_sheet_selector import ExcelSheetSelectorDialog
 from app.ui.excel_orientation_dialog import ExcelOrientationDialog
 from app.controller.excel_orientation_analyzer import ExcelOrientationAnalyzer
+from app.i18n import t, set_language, resolve_language
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -42,9 +44,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self._pending_jobs: list = []
         self._taskbar_button = None
         self._taskbar_progress = None
+        self._update_manager = UpdateManager(context, self)
 
-        self.setWindowTitle("らーく印刷")
-        self.resize(1100, 700)
+        self.resize(1024, 768)
 
         self._build_menu()
         self._build_layout()
@@ -54,36 +56,45 @@ class MainWindow(QtWidgets.QMainWindow):
         self._load_printers()
         self._refresh_rules()
         self._update_status()
+        self._apply_language()
+
+        QtCore.QTimer.singleShot(600, self._update_manager.check_on_startup)
 
     def _build_menu(self) -> None:
-        menu_bar = self.menuBar()
-        file_menu = menu_bar.addMenu("ファイル")
-        add_files_action = QtGui.QAction("ファイル追加", self)
-        add_folder_action = QtGui.QAction("フォルダー追加", self)
-        apply_rules_action = QtGui.QAction("ルールで自動設定（手動は保護）", self)
-        apply_rules_force_action = QtGui.QAction("ルールで全部上書き", self)
-        exit_action = QtGui.QAction("終了", self)
+        self.menu_bar = self.menuBar()
+        self.file_menu = self.menu_bar.addMenu("")
+        self.help_menu = self.menu_bar.addMenu("")
 
-        add_files_action.triggered.connect(self._on_add_files)
-        add_folder_action.triggered.connect(self._on_add_folder)
-        apply_rules_action.triggered.connect(lambda: self._job_manager.apply_rules(force=False))
-        apply_rules_force_action.triggered.connect(lambda: self._job_manager.apply_rules(force=True))
-        exit_action.triggered.connect(self.close)
+        self.add_files_action = QtGui.QAction(self)
+        self.add_folder_action = QtGui.QAction(self)
+        self.apply_rules_action = QtGui.QAction(self)
+        self.apply_rules_force_action = QtGui.QAction(self)
+        self.exit_action = QtGui.QAction(self)
 
-        file_menu.addAction(add_files_action)
-        file_menu.addAction(add_folder_action)
-        file_menu.addAction(apply_rules_action)
-        file_menu.addAction(apply_rules_force_action)
-        file_menu.addSeparator()
-        file_menu.addAction(exit_action)
+        self.about_action = QtGui.QAction(self)
+        self.log_summary_action = QtGui.QAction(self)
+        self.check_updates_action = QtGui.QAction(self)
 
-        help_menu = menu_bar.addMenu("ヘルプ")
-        about_action = QtGui.QAction("このアプリについて", self)
-        log_summary_action = QtGui.QAction("ログの要約", self)
-        about_action.triggered.connect(self._on_about)
-        help_menu.addAction(about_action)
-        log_summary_action.triggered.connect(self._on_log_summary)
-        help_menu.addAction(log_summary_action)
+        self.add_files_action.triggered.connect(self._on_add_files)
+        self.add_folder_action.triggered.connect(self._on_add_folder)
+        self.apply_rules_action.triggered.connect(lambda: self._job_manager.apply_rules(force=False))
+        self.apply_rules_force_action.triggered.connect(lambda: self._job_manager.apply_rules(force=True))
+        self.exit_action.triggered.connect(self.close)
+
+        self.about_action.triggered.connect(self._on_about)
+        self.log_summary_action.triggered.connect(self._on_log_summary)
+        self.check_updates_action.triggered.connect(self._on_check_updates)
+
+        self.file_menu.addAction(self.add_files_action)
+        self.file_menu.addAction(self.add_folder_action)
+        self.file_menu.addAction(self.apply_rules_action)
+        self.file_menu.addAction(self.apply_rules_force_action)
+        self.file_menu.addSeparator()
+        self.file_menu.addAction(self.exit_action)
+
+        self.help_menu.addAction(self.about_action)
+        self.help_menu.addAction(self.log_summary_action)
+        self.help_menu.addAction(self.check_updates_action)
 
     def _build_layout(self) -> None:
         splitter = QtWidgets.QSplitter()
@@ -94,16 +105,18 @@ class MainWindow(QtWidgets.QMainWindow):
 
         splitter.addWidget(self.file_list)
         splitter.addWidget(self.settings_panel)
-        splitter.setStretchFactor(0, 3)
-        splitter.setStretchFactor(1, 2)
+        splitter.setStretchFactor(0, 5)
+        splitter.setStretchFactor(1, 1)
+        splitter.setSizes([900, 200])
+        splitter.setHandleWidth(1)
 
         central = QtWidgets.QWidget()
         central_layout = QtWidgets.QVBoxLayout(central)
         central_layout.addWidget(splitter)
 
         bottom_layout = QtWidgets.QHBoxLayout()
-        self.start_button = QtWidgets.QPushButton("印刷開始")
-        self.retry_button = QtWidgets.QPushButton("失敗だけ再印刷")
+        self.start_button = QtWidgets.QPushButton()
+        self.retry_button = QtWidgets.QPushButton()
         self.retry_button.setEnabled(False)
         bottom_layout.addWidget(self.start_button)
         bottom_layout.addWidget(self.retry_button)
@@ -111,7 +124,6 @@ class MainWindow(QtWidgets.QMainWindow):
         central_layout.addLayout(bottom_layout)
 
         self.setCentralWidget(central)
-        self.statusBar().showMessage("準備完了")
 
     def _bind_signals(self) -> None:
         self.file_list.files_dropped.connect(self._job_manager.add_files)
@@ -131,6 +143,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.settings_panel.rule_remove_requested.connect(self._on_rule_remove)
         self.settings_panel.theme_changed.connect(self._on_theme_changed)
         self.settings_panel.paper_size_changed.connect(self._on_paper_size_changed)
+        self.settings_panel.language_changed.connect(self._on_language_changed)
+        self.settings_panel.update_check_changed.connect(self._on_update_check_changed)
+        self.settings_panel.auto_update_changed.connect(self._on_auto_update_changed)
 
         self.start_button.clicked.connect(self._on_start_printing)
         self.retry_button.clicked.connect(self._on_retry_failed)
@@ -140,6 +155,32 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self._context.rules_changed.connect(self._refresh_rules)
         self._context.settings_changed.connect(self._refresh_settings)
+
+    def _apply_language(self) -> None:
+        self.setWindowTitle(t("app_title"))
+        self.file_menu.setTitle(t("menu_file"))
+        self.help_menu.setTitle(t("menu_help"))
+
+        self.add_files_action.setText(t("action_add_files"))
+        self.add_folder_action.setText(t("action_add_folder"))
+        self.apply_rules_action.setText(t("action_apply_rules"))
+        self.apply_rules_force_action.setText(t("action_apply_rules_force"))
+        self.exit_action.setText(t("action_exit"))
+
+        self.about_action.setText(t("action_about"))
+        self.log_summary_action.setText(t("action_log_summary"))
+        self.check_updates_action.setText(t("action_check_updates"))
+
+        self.start_button.setText(t("button_start_printing"))
+        self.retry_button.setText(t("button_retry_failed"))
+
+        self.settings_panel.retranslate()
+        self.file_list.retranslate()
+        self._refresh_rules()
+        self._refresh_paper_sizes()
+        if self._progress_dialog:
+            self._progress_dialog.retranslate()
+        self._update_status()
 
     def _refresh_settings(self) -> None:
         settings = self._context.settings
@@ -152,6 +193,9 @@ class MainWindow(QtWidgets.QMainWindow):
             selected_printer=settings.selected_printer,
             default_printer=default_printer,
             excel_orientation_mode=settings.excel_orientation_mode,
+            language_mode=settings.language_mode,
+            update_check_enabled=settings.update_check_enabled,
+            auto_update_enabled=settings.auto_update_enabled,
         )
         self._refresh_paper_sizes()
         self._refresh_rules()
@@ -165,23 +209,26 @@ class MainWindow(QtWidgets.QMainWindow):
         total = self._job_manager.job_count()
         failed = sum(1 for job in self._job_manager.jobs() if job.status == JobStatus.FAILED)
         completed = sum(1 for job in self._job_manager.jobs() if job.status == JobStatus.SUCCESS)
-        self.statusBar().showMessage(f"ジョブ数: {total} | 完了: {completed} | 失敗: {failed}")
+        self.statusBar().showMessage(t("status_jobs_fmt", total=total, completed=completed, failed=failed))
         self.retry_button.setEnabled(failed > 0 and not (self._executor and self._executor.isRunning()))
 
     def _on_add_files(self) -> None:
         filter_text = "印刷できるファイル (*.pdf *.doc *.docx *.xls *.xlsx *.xlsm *.ppt *.pptx)"
-        files, _ = QtWidgets.QFileDialog.getOpenFileNames(self, "ファイルを追加", "", filter_text)
+        files, _ = QtWidgets.QFileDialog.getOpenFileNames(self, t("action_add_files"), "", filter_text)
         if files:
             self._job_manager.add_files(files)
 
     def _on_add_folder(self) -> None:
-        folder = QtWidgets.QFileDialog.getExistingDirectory(self, "フォルダーを追加")
+        folder = QtWidgets.QFileDialog.getExistingDirectory(self, t("action_add_folder"))
         if folder:
             self._job_manager.add_folder(folder, recursive=True)
 
     def _on_about(self) -> None:
         dialog = AboutDialog(self)
         dialog.exec()
+
+    def _on_check_updates(self) -> None:
+        self._update_manager.check_for_updates(manual=True)
 
     def _on_job_printer_select(self, job_id: str) -> None:
         job = self._job_manager.find_job_by_id(job_id)
@@ -198,7 +245,7 @@ class MainWindow(QtWidgets.QMainWindow):
         try:
             sheet_names = self._job_manager.list_excel_sheets(job.file_path)
         except Exception as exc:
-            QtWidgets.QMessageBox.warning(self, "Excel", str(exc))
+            QtWidgets.QMessageBox.warning(self, t("title_excel"), str(exc))
             return
         selected, ok = ExcelSheetSelectorDialog.get_sheets(
             job.file_name,
@@ -250,6 +297,17 @@ class MainWindow(QtWidgets.QMainWindow):
         if app:
             apply_theme(app, mode)
 
+    def _on_language_changed(self, mode: str) -> None:
+        self._context.update_setting(language_mode=mode)
+        set_language(resolve_language(mode))
+        self._apply_language()
+
+    def _on_update_check_changed(self, enabled: bool) -> None:
+        self._context.update_setting(update_check_enabled=enabled)
+
+    def _on_auto_update_changed(self, enabled: bool) -> None:
+        self._context.update_setting(auto_update_enabled=enabled)
+
     def _on_open_printer_settings(self) -> None:
         settings = self._context.settings
         printer_name = ""
@@ -258,12 +316,12 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             printer_name = settings.selected_printer
         if not printer_name:
-            QtWidgets.QMessageBox.information(self, "プリンター", "プリンターが選ばれていません。")
+            QtWidgets.QMessageBox.information(self, t("title_printer"), t("msg_printer_not_selected"))
             return
         try:
             open_printer_properties(printer_name)
         except Exception as exc:
-            QtWidgets.QMessageBox.warning(self, "プリンター", str(exc))
+            QtWidgets.QMessageBox.warning(self, t("title_printer"), str(exc))
 
     def _on_rule_printer_changed(self, extension: str, printer: str) -> None:
         self._context.update_rule(extension, printer)
@@ -271,7 +329,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _on_rule_add(self, extension: str) -> None:
         if extension in self._context.rules:
-            QtWidgets.QMessageBox.information(self, "ルール", "すでに追加されています。")
+            QtWidgets.QMessageBox.information(self, t("title_rules"), t("msg_rule_exists"))
             return
         self._context.update_rule(extension, "")
         self._job_manager.apply_rules()
@@ -287,11 +345,11 @@ class MainWindow(QtWidgets.QMainWindow):
         if self._executor and self._executor.isRunning():
             return
         if self._job_manager.job_count() == 0:
-            QtWidgets.QMessageBox.information(self, "印刷", "印刷するファイルがありません。")
+            QtWidgets.QMessageBox.information(self, t("title_print"), t("msg_no_files"))
             return
         enabled_jobs = self._job_manager.get_enabled_jobs()
         if not enabled_jobs:
-            QtWidgets.QMessageBox.information(self, "印刷", "印刷するチェックが入ったファイルがありません。")
+            QtWidgets.QMessageBox.information(self, t("title_print"), t("msg_no_checked"))
             return
 
         if self._context.settings.excel_orientation_mode == "ask":
@@ -310,7 +368,7 @@ class MainWindow(QtWidgets.QMainWindow):
             return
         jobs = [job for job in self._job_manager.jobs() if job.id in set(job_ids)]
         if not jobs:
-            QtWidgets.QMessageBox.information(self, "印刷", "選択された行がありません。")
+            QtWidgets.QMessageBox.information(self, t("title_print"), t("msg_no_selected_rows"))
             return
         if self._context.settings.excel_orientation_mode == "ask":
             excel_jobs = [job for job in jobs if job.file_type == FileType.EXCEL]
@@ -334,7 +392,7 @@ class MainWindow(QtWidgets.QMainWindow):
             return
         failed_jobs = self._job_manager.get_failed_jobs()
         if not failed_jobs:
-            QtWidgets.QMessageBox.information(self, "再印刷", "失敗した印刷はありません。")
+            QtWidgets.QMessageBox.information(self, t("title_retry"), t("msg_no_failed"))
             return
         self._lock_ui(True)
         self._job_manager.reset_failed_jobs()
@@ -362,17 +420,17 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _on_job_failed(self, job_id: str) -> None:
         job = self._job_manager.find_job_by_id(job_id)
-        file_name = job.file_name if job else "不明なファイル"
-        summary = job.summary if job and job.summary else "印刷に失敗しました。"
+        file_name = job.file_name if job else "-"
+        summary = job.summary if job and job.summary else t("msg_print_failed")
         message = job.message if job and job.message else ""
         dialog = QtWidgets.QMessageBox(self)
         dialog.setIcon(QtWidgets.QMessageBox.Warning)
-        dialog.setWindowTitle("印刷に失敗しました")
+        dialog.setWindowTitle(t("title_print_failed"))
         if message:
-            dialog.setText(f"{file_name}\n{summary}\n\n詳細:\n{message}")
+            dialog.setText(f"{file_name}\n{summary}\n\n{message}")
         else:
             dialog.setText(f"{file_name}\n{summary}")
-        log_button = dialog.addButton("詳細ログを開く", QtWidgets.QMessageBox.ActionRole)
+        log_button = dialog.addButton(t("btn_open_log"), QtWidgets.QMessageBox.ActionRole)
         dialog.addButton(QtWidgets.QMessageBox.Ok)
         dialog.exec()
         if dialog.clickedButton() == log_button:
@@ -404,8 +462,8 @@ class MainWindow(QtWidgets.QMainWindow):
     def _get_effective_printer_name(self) -> str:
         settings = self._context.settings
         if settings.use_default_printer:
-            return self._get_default_printer_name() or "未検出"
-        return settings.selected_printer or "未選択"
+            return self._get_default_printer_name() or "-"
+        return settings.selected_printer or "-"
 
     def _load_printers(self) -> None:
         try:
@@ -426,14 +484,14 @@ class MainWindow(QtWidgets.QMainWindow):
             tooltip = ""
         else:
             enabled = False
-            tooltip = "このプリンターから用紙サイズを取得できません。"
+            tooltip = t("paper_size_unavailable")
         self.settings_panel.set_paper_sizes(sizes, settings.paper_size, enabled, tooltip)
 
     def _on_log_summary(self) -> None:
         items = []
         for job in self._job_manager.get_failed_jobs():
-            summary = job.summary or "印刷に失敗しました。"
-            detail = job.message or "詳細情報がありません。"
+            summary = job.summary or t("msg_print_failed")
+            detail = job.message or ""
             items.append((job.file_name, summary, detail))
         dialog = LogSummaryDialog(str(self._context.log_path), items, self)
         dialog.exec()
@@ -445,9 +503,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self._orientation_analyzer.completed.connect(self._on_excel_orientation_ready)
         self._orientation_analyzer.failed.connect(self._on_excel_orientation_failed)
         self._orientation_progress = QtWidgets.QProgressDialog(
-            "Excel の向きを確認中です...", "", 0, 0, self
+            t("msg_excel_orientation_checking"), "", 0, 0, self
         )
-        self._orientation_progress.setWindowTitle("確認中")
+        self._orientation_progress.setWindowTitle(t("title_checking"))
         self._orientation_progress.setCancelButton(None)
         self._orientation_progress.setWindowModality(QtCore.Qt.ApplicationModal)
         self._orientation_progress.show()
@@ -482,7 +540,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if self._orientation_progress:
             self._orientation_progress.close()
             self._orientation_progress = None
-        QtWidgets.QMessageBox.warning(self, "Excel", message)
+        QtWidgets.QMessageBox.warning(self, t("title_excel"), message)
         self._lock_ui(True)
         pending_ids = [job.id for job in self._pending_jobs]
         self._job_manager.reset_statuses_for(pending_ids)
@@ -494,8 +552,8 @@ class MainWindow(QtWidgets.QMainWindow):
         if self._executor and self._executor.isRunning():
             QtWidgets.QMessageBox.information(
                 self,
-                "印刷中",
-                "印刷中です。完了を待つか、キャンセルしてください。",
+                t("title_print"),
+                t("msg_printing_in_progress"),
             )
             event.ignore()
             return
@@ -541,3 +599,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self._taskbar_button.setWindow(window)
             self._taskbar_progress = self._taskbar_button.progress()
             self._taskbar_progress.setMinimum(0)
+
+
+

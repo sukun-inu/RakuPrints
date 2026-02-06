@@ -1,94 +1,85 @@
-# らーく印刷 - 仕様書 & 説明書
+# らーく印刷 (RakuPrint)
 
-<img src="https://raw.githubusercontent.com/sukun-inu/RakuPrints/refs/heads/main/assets/icon.png" width="10%">
+<img src="assets/icon.png" width="80">
 
-## アプリケーション概要
-らーく印刷は、複数のドキュメント形式（Excel、Word、PDF、PowerPoint）を効率的に印刷するためのデスクトップアプリケーションです。印刷ジョブの管理や設定のカスタマイズを簡単に行えるよう設計されています。
+Windows向けの一括印刷アプリケーション。PDF、Excel、Word、PowerPointファイルをまとめて印刷できます。
 
-このアプリケーションは、Pythonで開発され、PyInstallerを使用してWindows向けにビルドされています。`らーく印刷app.zip`には、ビルド済みの実行可能ファイルが含まれています。
+## 📥 インストール
 
----
+### ユーザー向け
+[Releases](https://github.com/sukun-inu/RakuPrints/releases) から `RakuPrint_Setup_x.x.x.exe` をダウンロードして実行してください。
 
-## 主な機能
-- **Excel印刷**: シート選択、向きの自動分析。
-- **Word印刷**: 文書の印刷設定を簡単に管理。
-- **PDF印刷**: PDFファイルの効率的な印刷処理。
-- **PowerPoint印刷**: スライドの印刷設定をサポート。
-- **プリンター選択**: 利用可能なプリンターを簡単に選択可能。
-- **ログ管理**: 印刷ジョブの履歴を確認可能。
+### 開発者向け
+```powershell
+# リポジトリをクローン
+git clone https://github.com/sukun-inu/RakuPrints.git
+cd RakuPrints
 
----
+# 仮想環境を作成・有効化
+python -m venv .venv
+.venv\Scripts\Activate.ps1
 
-## 使用方法
+# 依存関係をインストール
+pip install -r requirements.txt
 
-### 1. アプリケーションの起動
-1. `らーく印刷app.zip`を解凍します。
-2. 解凍したフォルダ内の`らーく印刷.exe`をダブルクリックしてアプリケーションを起動します。
-
-### 2. メイン画面の操作
-1. **ファイルの追加**:
-   - メイン画面の「ファイルを追加」ボタンをクリックします。
-   - 印刷したいファイルを選択します（複数選択可能）。
-2. **ファイルリストの管理**:
-   - 追加したファイルはリストに表示されます。
-   - リスト内のファイルを選択して「削除」ボタンを押すと、リストから削除できます。
-
-### 3. 印刷設定
-1. **プリンターの選択**:
-   - 「プリンター選択」ボタンをクリックして、使用するプリンターを選択します。
-2. **印刷オプションの設定**:
-   - 必要に応じて、以下の設定を行います。
-     - **部数**: 印刷する部数を指定します。
-     - **ページ範囲**: 印刷するページ範囲を指定します。
-     - **カスタム設定**: 各ドキュメント形式（Excel、Word、PDF、PowerPoint）に応じた詳細設定を行います。
-
-### 4. 印刷ジョブの実行
-1. 設定が完了したら、「印刷開始」ボタンをクリックします。
-2. 印刷ジョブの進行状況は、画面下部の進行バーで確認できます。
-3. 印刷が完了すると、結果がログに記録されます。
-
-### 5. ログの確認
-1. 「ログ表示」ボタンをクリックして、過去の印刷ジョブの履歴を確認します。
-2. 必要に応じて、ログをエクスポートすることも可能です。
-
----
-
-## システム要件
-- **OS**: Windows 10/11
-- **Python**: 不要（ビルド済みの実行ファイルを使用するため）
-- **ディスク容量**: 約100MBの空き容量
-
----
-
-## 開発者向け情報
-
-### ソースコード構成
-```
-app/
-  backend/       # 各種ドキュメントの印刷処理を担当
-  config/        # 設定ファイル (ルールやユーザー設定)
-  controller/    # 印刷ジョブの管理と実行
-  model/         # データモデル (印刷ジョブや結果)
-  ui/            # ユーザーインターフェース
-build/           # ビルド成果物
+# アプリを起動
+python -m app.main
 ```
 
-### ビルド手順
-1. 仮想環境を作成し、アクティベートします。
-   ```powershell
-   python -m venv .venv
-   & .venv\Scripts\Activate.ps1
-   ```
-2. 必要なライブラリをインストールします。
-   ```powershell
-   pip install -r requirements.txt
-   ```
-3. PyInstallerを使用してビルドします。
-   ```powershell
-   pyinstaller らーく印刷.spec
-   ```
+## ✨ 機能
 
----
+- **対応形式**: PDF, Excel (.xlsx/.xls), Word (.docx/.doc), PowerPoint (.pptx/.ppt)
+- **ドラッグ&ドロップ**: ファイルを画面にドロップするだけで追加
+- **プリンター設定**: ファイル形式ごとにプリンターを指定可能
+- **多言語対応**: 日本語、英語、韓国語、中国語
+- **テーマ**: ライト/ダーク/システム連動
+- **自動アップデート**: 新バージョンを自動検出
 
-## ライセンス
-このプロジェクトのライセンスについては、別途記載されている場合を除き、すべての権利を留保します。
+## 📁 プロジェクト構成
+
+```
+RakuPrints/
+├── app/                    # アプリケーション本体
+│   ├── backend/            # 印刷処理 (PDF, Excel, Word, PPT)
+│   ├── controller/         # ビジネスロジック
+│   ├── model/              # データモデル
+│   ├── ui/                 # ユーザーインターフェース (PySide6)
+│   ├── config/             # 設定ファイル (自動生成)
+│   ├── logging/            # ログファイル (自動生成)
+│   ├── app_context.py      # アプリ設定管理
+│   ├── i18n.py             # 多言語対応
+│   ├── main.py             # エントリーポイント
+│   └── version.py          # バージョン情報
+├── scripts/                # ビルドスクリプト
+│   └── build.ps1           # ビルド自動化
+├── assets/                 # アイコン等のリソース
+├── RakuPrint.spec          # PyInstaller設定
+├── installer.iss           # Inno Setupスクリプト
+├── requirements.txt        # Python依存関係
+└── README.md               # このファイル
+```
+
+## 🔨 ビルド
+
+### EXEのみ作成
+```powershell
+python -m PyInstaller RakuPrint.spec --noconfirm
+```
+出力: `dist/RakuPrint/RakuPrint.exe`
+
+### インストーラー作成 (Inno Setup 6 必要)
+```powershell
+.\scripts\build.ps1
+```
+出力:
+- `dist/RakuPrint/` - スタンドアロン版
+- `dist/RakuPrint_vX.X.X.zip` - GitHub Release用
+- `installer_output/RakuPrint_Setup_X.X.X.exe` - インストーラー
+
+## 🔄 自動アップデート
+
+GitHub Releasesに `.zip` ファイルを添付すると、アプリが自動的に検出してアップデートを提案します。
+
+## 📝 ライセンス
+
+Copyright © 2026 Hibiki Suzuki. All rights reserved.

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from PySide6 import QtCore, QtWidgets
 
+from app.i18n import t
+
 
 class ExcelSheetSelectorDialog(QtWidgets.QDialog):
     def __init__(
@@ -12,15 +14,14 @@ class ExcelSheetSelectorDialog(QtWidgets.QDialog):
         parent: QtWidgets.QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Excel シート選択")
         self.resize(420, 420)
 
         self._selected: set[str] = set(selected or [])
 
         layout = QtWidgets.QVBoxLayout(self)
-        title = QtWidgets.QLabel(f"{file_name} のシートを選んでください")
-        title.setWordWrap(True)
-        layout.addWidget(title)
+        self.title = QtWidgets.QLabel()
+        self.title.setWordWrap(True)
+        layout.addWidget(self.title)
 
         self.list_widget = QtWidgets.QListWidget()
         self.list_widget.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
@@ -36,8 +37,8 @@ class ExcelSheetSelectorDialog(QtWidgets.QDialog):
             self.list_widget.addItem(item)
 
         button_row = QtWidgets.QHBoxLayout()
-        self.select_all_button = QtWidgets.QPushButton("全選択")
-        self.clear_button = QtWidgets.QPushButton("全解除")
+        self.select_all_button = QtWidgets.QPushButton()
+        self.clear_button = QtWidgets.QPushButton()
         button_row.addWidget(self.select_all_button)
         button_row.addWidget(self.clear_button)
         button_row.addStretch(1)
@@ -53,6 +54,15 @@ class ExcelSheetSelectorDialog(QtWidgets.QDialog):
         buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
 
+        self._file_name = file_name
+        self.retranslate()
+
+    def retranslate(self) -> None:
+        self.setWindowTitle(t("excel_sheet_title"))
+        self.title.setText(t("excel_sheet_prompt_fmt", file=self._file_name))
+        self.select_all_button.setText(t("excel_sheet_select_all"))
+        self.clear_button.setText(t("excel_sheet_clear"))
+
     def _select_all(self) -> None:
         for index in range(self.list_widget.count()):
             self.list_widget.item(index).setCheckState(QtCore.Qt.Checked)
@@ -64,7 +74,7 @@ class ExcelSheetSelectorDialog(QtWidgets.QDialog):
     def _on_accept(self) -> None:
         selected = self.selected_sheets()
         if not selected:
-            QtWidgets.QMessageBox.information(self, "シート選択", "1つ以上選んでください。")
+            QtWidgets.QMessageBox.information(self, t("title_excel"), t("msg_excel_sheet_required"))
             return
         self.accept()
 

@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# PyInstaller
+build/
+dist/
+*.spec.bak
+
+# Inno Setup output
+installer_output/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# App runtime files
+app/config/user_settings.json
+app/logging/*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Test files
+test.pdf
+*.test.*
+
+# Temporary files
+*.tmp
+*.temp
+*.bak

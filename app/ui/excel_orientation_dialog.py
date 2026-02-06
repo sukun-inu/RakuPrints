@@ -4,6 +4,8 @@ from typing import Iterable, Tuple
 
 from PySide6 import QtCore, QtWidgets
 
+from app.i18n import t
+
 
 class ExcelOrientationDialog(QtWidgets.QDialog):
     def __init__(
@@ -12,18 +14,16 @@ class ExcelOrientationDialog(QtWidgets.QDialog):
         parent: QtWidgets.QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Excelの向き確認")
         self.resize(520, 360)
 
         self._items = list(items)
 
         layout = QtWidgets.QVBoxLayout(self)
-        label = QtWidgets.QLabel("Excel の向き推奨を確認してください。\n印刷時に自動で向きを調整しますか？")
-        label.setWordWrap(True)
-        layout.addWidget(label)
+        self.label = QtWidgets.QLabel()
+        self.label.setWordWrap(True)
+        layout.addWidget(self.label)
 
         self.table = QtWidgets.QTableWidget(0, 4)
-        self.table.setHorizontalHeaderLabels(["ファイル", "推奨", "理由", "適用"])
         self.table.horizontalHeader().setStretchLastSection(True)
         self.table.verticalHeader().setVisible(False)
         self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
@@ -33,8 +33,8 @@ class ExcelOrientationDialog(QtWidgets.QDialog):
         self._populate()
 
         button_row = QtWidgets.QHBoxLayout()
-        self.select_all_button = QtWidgets.QPushButton("すべて適用")
-        self.clear_button = QtWidgets.QPushButton("すべて解除")
+        self.select_all_button = QtWidgets.QPushButton()
+        self.clear_button = QtWidgets.QPushButton()
         button_row.addWidget(self.select_all_button)
         button_row.addWidget(self.clear_button)
         button_row.addStretch(1)
@@ -50,6 +50,22 @@ class ExcelOrientationDialog(QtWidgets.QDialog):
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
 
+        self.retranslate()
+
+    def retranslate(self) -> None:
+        self.setWindowTitle(t("excel_orientation_title"))
+        self.label.setText(t("excel_orientation_prompt"))
+        self.table.setHorizontalHeaderLabels(
+            [
+                t("excel_orientation_file"),
+                t("excel_orientation_recommend"),
+                t("excel_orientation_reason"),
+                t("excel_orientation_apply"),
+            ]
+        )
+        self.select_all_button.setText(t("excel_orientation_select_all"))
+        self.clear_button.setText(t("excel_orientation_clear"))
+
     def _populate(self) -> None:
         self.table.setRowCount(0)
         for row, (_job_id, file_name, recommendation, reason) in enumerate(self._items):
@@ -64,13 +80,13 @@ class ExcelOrientationDialog(QtWidgets.QDialog):
 
     def _select_all(self) -> None:
         for row in range(self.table.rowCount()):
-            item = self.table.item(row, 2)
+            item = self.table.item(row, 3)
             if item:
                 item.setCheckState(QtCore.Qt.Checked)
 
     def _clear_all(self) -> None:
         for row in range(self.table.rowCount()):
-            item = self.table.item(row, 2)
+            item = self.table.item(row, 3)
             if item:
                 item.setCheckState(QtCore.Qt.Unchecked)
 

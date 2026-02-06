@@ -3,12 +3,12 @@ from __future__ import annotations
 from PySide6 import QtCore, QtWidgets
 
 from app.backend.printer_utils import list_printers
+from app.i18n import t
 
 
 class PrinterSelectorDialog(QtWidgets.QDialog):
     def __init__(self, current_printer: str = "", parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("プリンターを選ぶ")
         self.resize(360, 400)
 
         layout = QtWidgets.QVBoxLayout(self)
@@ -24,12 +24,16 @@ class PrinterSelectorDialog(QtWidgets.QDialog):
         button_box.rejected.connect(self.reject)
 
         self._load_printers(current_printer)
+        self.retranslate()
+
+    def retranslate(self) -> None:
+        self.setWindowTitle(t("printer_select_title"))
 
     def _load_printers(self, current_printer: str) -> None:
         try:
             printers = list_printers()
         except Exception as exc:
-            QtWidgets.QMessageBox.warning(self, "プリンター", str(exc))
+            QtWidgets.QMessageBox.warning(self, t("title_printer"), str(exc))
             printers = []
 
         for name in printers:

@@ -6,11 +6,10 @@ from PySide6 import QtCore, QtGui, QtWidgets
 
 from app.controller.job_manager import JobManager
 from app.model.print_job import JobStatus, FileType
+from app.i18n import t
 
 
 class JobTableModel(QtCore.QAbstractTableModel):
-    headers = ["印刷", "ファイル名", "場所", "種類", "ラベル", "シート", "プリンター", "状態"]
-
     def __init__(self, job_manager: JobManager) -> None:
         super().__init__()
         self._job_manager = job_manager
@@ -30,11 +29,11 @@ class JobTableModel(QtCore.QAbstractTableModel):
         return self._job_manager.job_count()
 
     def columnCount(self, parent: QtCore.QModelIndex = QtCore.QModelIndex()) -> int:
-        return len(self.headers)
+        return len(self._headers())
 
     def headerData(self, section: int, orientation: QtCore.Qt.Orientation, role: int = QtCore.Qt.DisplayRole):
         if role == QtCore.Qt.DisplayRole and orientation == QtCore.Qt.Horizontal:
-            return self.headers[section]
+            return self._headers()[section]
         return None
 
     def data(self, index: QtCore.QModelIndex, role: int = QtCore.Qt.DisplayRole):
@@ -52,18 +51,15 @@ class JobTableModel(QtCore.QAbstractTableModel):
             if column == 2:
                 return job.file_path
             if column == 3:
-                return job.file_type.value
+                return self._format_file_type(job.file_type)
             if column == 4:
-                return job.auto_label()
+                return self._format_label(job)
             if column == 5:
-                return job.display_sheets()
+                return self._format_sheets(job)
             if column == 6:
-                return job.display_printer()
+                return self._format_printer(job)
             if column == 7:
-                if job.status == JobStatus.FAILED and job.message:
-                    summary = job.summary or job.message
-                    return f"{job.status.value}: {summary}"
-                return job.status.value
+                return self._format_status(job)
 
         if role == QtCore.Qt.DecorationRole and column == 7:
             return self._status_icons.get(job.status)
@@ -138,6 +134,77 @@ class JobTableModel(QtCore.QAbstractTableModel):
         self._job_manager.move_job(source_row, destination_row)
         return True
 
+    def sort(self, column: int, order: QtCore.Qt.SortOrder = QtCore.Qt.AscendingOrder) -> None:
+        descending = order == QtCore.Qt.DescendingOrder
+        self._job_manager.sort_jobs(column, descending)
+
+    def retranslate(self) -> None:
+        self.headerDataChanged.emit(QtCore.Qt.Horizontal, 0, self.columnCount() - 1)
+        self.layoutChanged.emit()
+
+    def _headers(self) -> list[str]:
+        return [
+            t("table_print"),
+            t("table_file"),
+            t("table_path"),
+            t("table_type"),
+            t("table_label"),
+            t("table_sheet"),
+            t("table_printer"),
+            t("table_status"),
+        ]
+
+    def _format_file_type(self, file_type: FileType) -> str:
+        if file_type == FileType.PDF:
+            return "PDF"
+        if file_type == FileType.WORD:
+            return "Word"
+        if file_type == FileType.EXCEL:
+            return "Excel"
+        if file_type == FileType.PPT:
+            return "PowerPoint"
+        return t("label_unknown")
+
+    def _format_label(self, job) -> str:
+        ext = job.extension
+        if ext == ".pdf":
+            return t("label_pdf")
+        if ext in (".doc", ".docx"):
+            return t("label_word")
+        if ext in (".xls", ".xlsx", ".xlsm"):
+            return t("label_excel")
+        if ext in (".ppt", ".pptx"):
+            return t("label_ppt")
+        return t("label_unknown")
+
+    def _format_sheets(self, job) -> str:
+        if job.file_type != FileType.EXCEL:
+            return ""
+        if not job.excel_sheets:
+            return t("label_all_sheets")
+        joined = ", ".join(job.excel_sheets)
+        return joined if len(joined) <= 20 else f"{joined[:17]}..."
+
+    def _format_printer(self, job) -> str:
+        return job.printer_name or t("label_auto")
+
+    def _format_status(self, job) -> str:
+        if job.status == JobStatus.FAILED and job.message:
+            summary = job.summary or job.message
+            return f"{self._status_text(job.status)}: {summary}"
+        return self._status_text(job.status)
+
+    def _status_text(self, status: JobStatus) -> str:
+        mapping = {
+            JobStatus.WAITING: t("status_waiting"),
+            JobStatus.PRINTING: t("status_printing"),
+            JobStatus.SUCCESS: t("status_success"),
+            JobStatus.FAILED: t("status_failed"),
+            JobStatus.CANCELLED: t("status_cancelled"),
+            JobStatus.SKIPPED: t("status_skipped"),
+        }
+        return mapping.get(status, status.value)
+
     def _on_jobs_changed(self) -> None:
         self.beginResetModel()
         self.endResetModel()
@@ -149,10 +216,6 @@ class JobTableModel(QtCore.QAbstractTableModel):
                 bottom_right = self.index(row, self.columnCount() - 1)
                 self.dataChanged.emit(top_left, bottom_right, [])
                 break
-
-    def sort(self, column: int, order: QtCore.Qt.SortOrder = QtCore.Qt.AscendingOrder) -> None:
-        descending = order == QtCore.Qt.DescendingOrder
-        self._job_manager.sort_jobs(column, descending)
 
     def _build_status_icons(self) -> dict[JobStatus, QtGui.QIcon]:
         return {
@@ -224,6 +287,9 @@ class FileListView(QtWidgets.QTableView):
         self.doubleClicked.connect(self._on_double_click)
         self.customContextMenuRequested.connect(self._on_context_menu)
 
+    def retranslate(self) -> None:
+        self._model.retranslate()
+
     def dragEnterEvent(self, event: QtGui.QDragEnterEvent) -> None:
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
@@ -294,12 +360,12 @@ class FileListView(QtWidgets.QTableView):
         selected_ids = self._selected_job_ids()
         excel_job = self._selected_excel_job()
         menu = QtWidgets.QMenu(self)
-        print_selected_action = menu.addAction("選択行のみ印刷")
-        printer_selected_action = menu.addAction("プリンター個別指定")
-        sheet_action = menu.addAction("Excelシートを選ぶ")
-        enable_action = menu.addAction("選択を有効にする")
-        disable_action = menu.addAction("選択を無効にする")
-        delete_action = menu.addAction("選択を削除")
+        print_selected_action = menu.addAction(t("context_print_selected"))
+        printer_selected_action = menu.addAction(t("context_printer_select"))
+        sheet_action = menu.addAction(t("context_excel_sheets"))
+        enable_action = menu.addAction(t("context_enable"))
+        disable_action = menu.addAction(t("context_disable"))
+        delete_action = menu.addAction(t("context_delete"))
         if not selected_ids:
             print_selected_action.setEnabled(False)
             printer_selected_action.setEnabled(False)
@@ -340,8 +406,8 @@ class FileListView(QtWidgets.QTableView):
             return
         result = QtWidgets.QMessageBox.question(
             self,
-            "削除",
-            f"選択した {len(selected_ids)} 件を削除しますか？",
+            t("title_delete"),
+            t("msg_delete_confirm_fmt", count=len(selected_ids)),
             QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
         )
         if result == QtWidgets.QMessageBox.Yes:

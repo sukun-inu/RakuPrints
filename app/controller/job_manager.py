@@ -10,6 +10,7 @@ from app.controller.rules_engine import RulesEngine
 from app.model.print_job import PrintJob, FileType, JobStatus
 from app.backend.printer_utils import get_default_printer_name
 from app.backend.excel_backend import ExcelBackend
+from app.i18n import t
 
 
 class JobManager(QtCore.QObject):
@@ -230,17 +231,48 @@ class JobManager(QtCore.QObject):
             if column == 3:
                 return job.file_type.value.lower()
             if column == 4:
-                return job.auto_label().lower()
+                return self._label_for_job(job).lower()
             if column == 5:
-                return job.display_sheets().lower()
+                return self._sheets_for_job(job).lower()
             if column == 6:
-                return job.display_printer().lower()
+                return (job.printer_name or t("label_auto")).lower()
             if column == 7:
-                return job.status.value.lower()
+                return self._status_text(job.status).lower()
             return ""
 
         self._jobs.sort(key=key, reverse=descending)
         self.jobs_changed.emit()
+
+    def _label_for_job(self, job: PrintJob) -> str:
+        ext = job.extension
+        if ext == ".pdf":
+            return t("label_pdf")
+        if ext in (".doc", ".docx"):
+            return t("label_word")
+        if ext in (".xls", ".xlsx", ".xlsm"):
+            return t("label_excel")
+        if ext in (".ppt", ".pptx"):
+            return t("label_ppt")
+        return t("label_unknown")
+
+    def _sheets_for_job(self, job: PrintJob) -> str:
+        if job.file_type != FileType.EXCEL:
+            return ""
+        if not job.excel_sheets:
+            return t("label_all_sheets")
+        joined = ", ".join(job.excel_sheets)
+        return joined if len(joined) <= 20 else f"{joined[:17]}..."
+
+    def _status_text(self, status: JobStatus) -> str:
+        mapping = {
+            JobStatus.WAITING: t("status_waiting"),
+            JobStatus.PRINTING: t("status_printing"),
+            JobStatus.SUCCESS: t("status_success"),
+            JobStatus.FAILED: t("status_failed"),
+            JobStatus.CANCELLED: t("status_cancelled"),
+            JobStatus.SKIPPED: t("status_skipped"),
+        }
+        return mapping.get(status, status.value)
 
     def _resolve_printer_for_path(self, file_path: str) -> str:
         if self._context.settings.use_default_printer:

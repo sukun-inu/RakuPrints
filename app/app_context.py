@@ -7,6 +7,7 @@ import json
 from PySide6 import QtCore
 
 from app.model.print_job import DuplexMode
+from app.i18n import resolve_language
 
 
 DEFAULT_RULES = {
@@ -30,6 +31,11 @@ class UserSettings:
     theme_mode: str = "system"
     paper_size: str = ""
     excel_orientation_mode: str = "auto"
+    language_mode: str = "system"
+    update_check_enabled: bool = True
+    auto_update_enabled: bool = False
+    update_snooze_until: str = ""
+    last_update_check: str = ""
 
     def to_dict(self) -> dict:
         return {
@@ -40,6 +46,11 @@ class UserSettings:
             "theme_mode": self.theme_mode,
             "paper_size": self.paper_size,
             "excel_orientation_mode": self.excel_orientation_mode,
+            "language_mode": self.language_mode,
+            "update_check_enabled": self.update_check_enabled,
+            "auto_update_enabled": self.auto_update_enabled,
+            "update_snooze_until": self.update_snooze_until,
+            "last_update_check": self.last_update_check,
         }
 
     @classmethod
@@ -56,6 +67,11 @@ class UserSettings:
             duplex = DuplexMode(duplex_value)
         except ValueError:
             duplex = DuplexMode.OFF
+        language_mode = str(data.get("language_mode", "system"))
+        if language_mode == "system":
+            language_mode = "system"
+        else:
+            language_mode = resolve_language(language_mode)
         return cls(
             use_default_printer=bool(data.get("use_default_printer", True)),
             selected_printer=str(data.get("selected_printer", "")),
@@ -64,7 +80,26 @@ class UserSettings:
             theme_mode=str(data.get("theme_mode", "system")),
             paper_size=str(data.get("paper_size", "")),
             excel_orientation_mode=str(data.get("excel_orientation_mode", "auto")),
+            language_mode=language_mode,
+            update_check_enabled=bool(data.get("update_check_enabled", True)),
+            auto_update_enabled=bool(data.get("auto_update_enabled", False)),
+            update_snooze_until=str(data.get("update_snooze_until", "")),
+            last_update_check=str(data.get("last_update_check", "")),
         )
+
+
+def _get_app_data_dir() -> Path:
+    """Get the appropriate directory for storing app data."""
+    import os
+    import sys
+    # Use AppData/Local for installed app, or local dir for development
+    if getattr(sys, 'frozen', False):
+        # Running as compiled exe
+        app_data = Path(os.environ.get('LOCALAPPDATA', Path.home() / 'AppData' / 'Local'))
+        return app_data / 'RakuPrint'
+    else:
+        # Running in development
+        return Path(__file__).resolve().parent
 
 
 class AppContext(QtCore.QObject):
@@ -73,7 +108,7 @@ class AppContext(QtCore.QObject):
 
     def __init__(self) -> None:
         super().__init__()
-        base_dir = Path(__file__).resolve().parent
+        base_dir = _get_app_data_dir()
         self._config_dir = base_dir / "config"
         self._log_dir = base_dir / "logging"
         self._config_dir.mkdir(parents=True, exist_ok=True)

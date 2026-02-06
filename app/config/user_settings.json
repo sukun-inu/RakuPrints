@@ -1,9 +1,14 @@
 {
   "use_default_printer": false,
-  "selected_printer": "Brother DCP-J926N Printer",
+  "selected_printer": "Microsoft Print to PDF",
   "copies": 1,
   "duplex": "\u3057\u306a\u3044",
   "theme_mode": "system",
   "paper_size": "",
-  "excel_orientation_mode": "auto"
+  "excel_orientation_mode": "auto",
+  "language_mode": "system",
+  "update_check_enabled": true,
+  "auto_update_enabled": false,
+  "update_snooze_until": "",
+  "last_update_check": "2026-02-06T17:52:17Z"
 }
