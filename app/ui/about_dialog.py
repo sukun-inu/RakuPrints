@@ -3,6 +3,7 @@ from __future__ import annotations
 from PySide6 import QtWidgets
 
 from app.i18n import t
+from app.version import __version__
 
 
 class AboutDialog(QtWidgets.QMessageBox):
@@ -14,4 +15,6 @@ class AboutDialog(QtWidgets.QMessageBox):
     def retranslate(self) -> None:
         self.setWindowTitle(t("about_title"))
         self.setText(t("about_text"))
-        self.setInformativeText(t("about_info"))
+        info = t("about_info")
+        info += f"\n\nVersion: {__version__}\nLicense: MIT"
+        self.setInformativeText(info)

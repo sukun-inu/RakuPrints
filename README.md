@@ -3,6 +3,8 @@
 
 <img src="assets/icon.png" width="80">
 
+**Version: 0.1.1**
+
 **※ Excel・Word・PowerPointファイルの印刷には Microsoft Office が必須です（PDF印刷は不要）**
 
 Windows向けの一括印刷アプリケーション。PDF、Excel、Word、PowerPointファイルをまとめて印刷できます。
