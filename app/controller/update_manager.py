@@ -211,18 +211,18 @@ class UpdateManager(QtCore.QObject):
         dialog.setWindowTitle(t("title_update"))
         dialog.setIcon(QtWidgets.QMessageBox.Information)
         dialog.setText(t("msg_update_available_fmt", version=info.version))
+        snooze_checkbox = QtWidgets.QCheckBox(t("update_ignore_7days"), dialog)
+        dialog.setCheckBox(snooze_checkbox)
         update_now = dialog.addButton(t("btn_update_now"), QtWidgets.QMessageBox.AcceptRole)
-        remind = dialog.addButton(t("btn_update_later"), QtWidgets.QMessageBox.ActionRole)
-        skip = dialog.addButton(t("btn_update_skip"), QtWidgets.QMessageBox.RejectRole)
+        update_no = dialog.addButton(t("btn_update_no"), QtWidgets.QMessageBox.RejectRole)
         dialog.exec()
 
         clicked = dialog.clickedButton()
         if clicked == update_now:
             self._download_update(info)
-        elif clicked == remind:
-            self._context.update_setting(update_snooze_until=_iso_plus_days(14))
-        else:
             return
+        if snooze_checkbox.isChecked():
+            self._context.update_setting(update_snooze_until=_iso_plus_days(7))
 
     def _download_update(self, info: UpdateInfo) -> None:
         if self._downloader and self._downloader.isRunning():
@@ -276,4 +276,3 @@ class UpdateManager(QtCore.QObject):
                 t("title_update"),
                 t("msg_update_error_fmt", error=str(exc)),
             )
-

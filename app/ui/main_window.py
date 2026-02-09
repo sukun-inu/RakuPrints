@@ -46,17 +46,21 @@ class MainWindow(QtWidgets.QMainWindow):
         self._taskbar_progress = None
         self._update_manager = UpdateManager(context, self)
 
-        self.resize(1024, 768)
+        # Prefer a 16:9 friendly starting size and require at least 1366x768
+        self.resize(1366, 768)
+        self.setMinimumSize(1366, 768)
 
         self._build_menu()
         self._build_layout()
         self._bind_signals()
 
+        # Apply language first to ensure UI elements are properly initialized
+        self._apply_language()
+        
         self._refresh_settings()
         self._load_printers()
         self._refresh_rules()
         self._update_status()
-        self._apply_language()
 
         QtCore.QTimer.singleShot(600, self._update_manager.check_on_startup)
 
@@ -107,7 +111,9 @@ class MainWindow(QtWidgets.QMainWindow):
         splitter.addWidget(self.settings_panel)
         splitter.setStretchFactor(0, 5)
         splitter.setStretchFactor(1, 1)
-        splitter.setSizes([900, 200])
+        # Make settings panel occupy a fixed-ish area on the right and avoid
+        # compressing its contents at small widths.
+        splitter.setSizes([1046, 300])
         splitter.setHandleWidth(1)
 
         central = QtWidgets.QWidget()
@@ -298,9 +304,14 @@ class MainWindow(QtWidgets.QMainWindow):
             apply_theme(app, mode)
 
     def _on_language_changed(self, mode: str) -> None:
-        self._context.update_setting(language_mode=mode)
+        if mode == self._context.settings.language_mode:
+            return
+        # Avoid re-entrancy via settings_changed while language combo is updating.
+        with QtCore.QSignalBlocker(self._context):
+            self._context.update_setting(language_mode=mode)
         set_language(resolve_language(mode))
         self._apply_language()
+        self._refresh_settings()
 
     def _on_update_check_changed(self, enabled: bool) -> None:
         self._context.update_setting(update_check_enabled=enabled)
@@ -599,6 +610,5 @@ class MainWindow(QtWidgets.QMainWindow):
             self._taskbar_button.setWindow(window)
             self._taskbar_progress = self._taskbar_button.progress()
             self._taskbar_progress.setMinimum(0)
-
 
 

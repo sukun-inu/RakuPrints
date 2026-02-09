@@ -40,6 +40,8 @@ def main() -> int:
     copies = int(payload.get("copies", 1))
     duplex = payload.get("duplex", "")
     paper_size = payload.get("paper_size", "")
+    page_start = int(payload.get("page_start", 0) or 0)
+    page_end_raw = payload.get("page_end", None)
 
     if not file_path:
         print("File path is required", file=sys.stderr)
@@ -63,6 +65,23 @@ def main() -> int:
             print("No pages in PDF", file=sys.stderr)
             return 4
 
+        if page_end_raw is None:
+            page_end = doc.page_count - 1
+        else:
+            page_end = int(page_end_raw)
+
+        if page_start < 0:
+            page_start = 0
+        if page_end < 0:
+            page_end = 0
+        if page_start >= doc.page_count:
+            page_start = doc.page_count - 1
+        if page_end >= doc.page_count:
+            page_end = doc.page_count - 1
+        if page_start > page_end:
+            print("Invalid page range", file=sys.stderr)
+            return 6
+
         printer = QtPrintSupport.QPrinter(QtPrintSupport.QPrinter.HighResolution)
         if printer_name:
             printer.setPrinterName(printer_name)
@@ -83,8 +102,8 @@ def main() -> int:
 
         target_dpi = int(payload.get("dpi", 600))
         scale = target_dpi / 72.0
-        for page_index in range(doc.page_count):
-            if page_index > 0:
+        for page_index in range(page_start, page_end + 1):
+            if page_index > page_start:
                 printer.newPage()
             page = doc.load_page(page_index)
             pix = page.get_pixmap(matrix=fitz.Matrix(scale, scale), alpha=False)

@@ -22,6 +22,21 @@ class PdfBackend:
             import fitz  # type: ignore
         except Exception as exc:
             raise RuntimeError("PDF 印刷には PyMuPDF が必要です。") from exc
+
+        try:
+            doc = fitz.open(job.file_path)
+            page_count = int(getattr(doc, "page_count", 0) or 0)
+        except Exception as exc:
+            raise RuntimeError("PDF の読み込みに失敗しました。") from exc
+        finally:
+            try:
+                doc.close()
+            except Exception:
+                pass
+
+        if page_count <= 0:
+            raise RuntimeError("PDF のページが見つかりません。")
+
         payload = {
             "file_path": job.file_path,
             "printer_name": job.printer_name,
@@ -30,6 +45,18 @@ class PdfBackend:
             "paper_size": job.paper_size,
             "dpi": 600,
         }
+        max_pages = 10
+        if page_count <= max_pages:
+            self._run_worker(payload)
+            return
+
+        for start in range(0, page_count, max_pages):
+            end = min(page_count - 1, start + max_pages - 1)
+            chunk_payload = dict(payload, page_start=start, page_end=end)
+            self._run_worker(chunk_payload)
+
+    @staticmethod
+    def _run_worker(payload: dict) -> None:
         try:
             if getattr(sys, "frozen", False):
                 cmd = [sys.executable, "--pdf-worker"]

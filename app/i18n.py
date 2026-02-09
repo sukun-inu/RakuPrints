@@ -62,8 +62,10 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "msg_update_downloading": "更新をダウンロードしています...",
         "msg_update_apply": "更新を適用して再起動しますか？",
         "btn_update_now": "今すぐ更新",
+        "btn_update_no": "いいえ",
         "btn_update_later": "あとで通知（14日）",
         "btn_update_skip": "今回はしない",
+        "update_ignore_7days": "7日間この通知を表示しない",
         "btn_close": "閉じる",
         "btn_open_log": "詳細ログを開く",
         "settings_printer_group": "プリンター設定",
@@ -202,8 +204,10 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "msg_update_downloading": "Downloading update...",
         "msg_update_apply": "Apply update and restart?",
         "btn_update_now": "Update Now",
+        "btn_update_no": "No",
         "btn_update_later": "Remind in 14 days",
         "btn_update_skip": "Skip",
+        "update_ignore_7days": "Don't show for 7 days",
         "btn_close": "Close",
         "btn_open_log": "Open Log",
         "settings_printer_group": "Printer Settings",
@@ -342,8 +346,10 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "msg_update_downloading": "업데이트 다운로드 중...",
         "msg_update_apply": "업데이트를 적용하고 재시작할까요?",
         "btn_update_now": "지금 업데이트",
+        "btn_update_no": "아니요",
         "btn_update_later": "14일 후 알림",
         "btn_update_skip": "이번에는 안 함",
+        "update_ignore_7days": "7일간 표시하지 않음",
         "btn_close": "닫기",
         "btn_open_log": "로그 열기",
         "settings_printer_group": "프린터 설정",
@@ -482,8 +488,10 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "msg_update_downloading": "正在下载更新...",
         "msg_update_apply": "应用更新并重启？",
         "btn_update_now": "现在更新",
+        "btn_update_no": "否",
         "btn_update_later": "14天后提醒",
         "btn_update_skip": "这次跳过",
+        "update_ignore_7days": "7天内不再提示",
         "btn_close": "关闭",
         "btn_open_log": "打开日志",
         "settings_printer_group": "打印机设置",
@@ -628,6 +636,33 @@ def set_language(lang: str) -> None:
     _current_language = resolve_language(lang)
 
 
+def broadcast_language_change() -> None:
+    """Call `retranslate()` on top-level widgets if available so UI updates immediately."""
+    try:
+        from PySide6 import QtWidgets
+
+        app = QtWidgets.QApplication.instance()
+        if not app:
+            return
+        for w in app.topLevelWidgets():
+            # Prefer explicit retranslate method when available
+            if hasattr(w, "retranslate") and callable(getattr(w, "retranslate")):
+                try:
+                    w.retranslate()
+                except Exception:
+                    pass
+            # Also try to update children that expose retranslate
+            for child in w.findChildren(QtWidgets.QWidget):
+                if hasattr(child, "retranslate") and callable(getattr(child, "retranslate")):
+                    try:
+                        child.retranslate()
+                    except Exception:
+                        pass
+    except Exception:
+        # Best-effort; don't fail if Qt isn't available
+        return
+
+
 def current_language() -> str:
     return _current_language
 
@@ -646,4 +681,3 @@ def t(key: str, **kwargs) -> str:
 def language_label(code: str) -> str:
     lang = current_language()
     return LANGUAGES.get(code, {}).get(lang, code)
-

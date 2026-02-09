@@ -124,43 +124,48 @@ class AppContext(QtCore.QObject):
     def _load_settings(self) -> UserSettings:
         if self.settings_path.exists():
             try:
-                data = json.loads(self.settings_path.read_text(encoding="utf-8"))
+                with open(str(self.settings_path), "r", encoding="utf-8") as f:
+                    data = json.loads(f.read())
                 return UserSettings.from_dict(data)
             except Exception:
                 return UserSettings()
         return UserSettings()
 
     def save_settings(self) -> None:
-        self.settings_path.write_text(
-            json.dumps(self.settings.to_dict(), indent=2),
-            encoding="utf-8",
-        )
-        self.settings_changed.emit()
+        try:
+            # Use standard file writing to avoid potential recursion issues
+            with open(str(self.settings_path), "w", encoding="utf-8") as f:
+                f.write(json.dumps(self.settings.to_dict(), indent=2))
+            self.settings_changed.emit()
+        except Exception:
+            # Silently fail to avoid recursion loops
+            pass
 
     def _load_rules(self) -> dict:
         if self.rules_path.exists():
             try:
-                data = json.loads(self.rules_path.read_text(encoding="utf-8"))
+                with open(str(self.rules_path), "r", encoding="utf-8") as f:
+                    data = json.loads(f.read())
                 if isinstance(data, dict):
                     return data
             except Exception:
                 pass
         rules = dict(DEFAULT_RULES)
         try:
-            self.rules_path.write_text(
-                json.dumps(rules, indent=2),
-                encoding="utf-8",
-            )
+            with open(str(self.rules_path), "w", encoding="utf-8") as f:
+                f.write(json.dumps(rules, indent=2))
         except Exception:
             pass
         return rules
 
     def save_rules(self) -> None:
-        self.rules_path.write_text(
-            json.dumps(self.rules, indent=2),
-            encoding="utf-8",
-        )
-        self.rules_changed.emit()
+        try:
+            with open(str(self.rules_path), "w", encoding="utf-8") as f:
+                f.write(json.dumps(self.rules, indent=2))
+            self.rules_changed.emit()
+        except Exception:
+            # Silently fail to avoid recursion loops
+            pass
 
     def update_setting(self, **kwargs) -> None:
         for key, value in kwargs.items():

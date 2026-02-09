@@ -139,7 +139,8 @@ class JobTableModel(QtCore.QAbstractTableModel):
         self._job_manager.sort_jobs(column, descending)
 
     def retranslate(self) -> None:
-        self.headerDataChanged.emit(QtCore.Qt.Horizontal, 0, self.columnCount() - 1)
+        # Only emit layoutChanged to avoid recursion from headerDataChanged
+        # The header will be updated when the view requests headerData()
         self.layoutChanged.emit()
 
     def _headers(self) -> list[str]:
@@ -279,8 +280,13 @@ class FileListView(QtWidgets.QTableView):
         self._model = JobTableModel(job_manager)
         self.setModel(self._model)
         self.setSortingEnabled(True)
-        self.horizontalHeader().setStretchLastSection(True)
-        self.horizontalHeader().setSectionsClickable(True)
+        header = self.horizontalHeader()
+        header.setStretchLastSection(False)
+        header.setSectionsClickable(True)
+        # Allow interactive resizing of columns and show horizontal scrollbar
+        header.setSectionResizeMode(QtWidgets.QHeaderView.Interactive)
+        self.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+        self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         self.verticalHeader().setDefaultSectionSize(28)
         self.verticalHeader().setVisible(False)
         self.setShowGrid(True)
