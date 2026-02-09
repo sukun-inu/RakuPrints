@@ -26,6 +26,8 @@ class SettingsPanel(QtWidgets.QWidget):
 
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
+        # Prevent the settings panel from being compressed too small
+        self.setMinimumWidth(320)
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
 

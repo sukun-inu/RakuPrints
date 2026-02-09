@@ -46,7 +46,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self._taskbar_progress = None
         self._update_manager = UpdateManager(context, self)
 
-        self.resize(1024, 768)
+        # Prefer a 16:9 friendly starting size and require at least 1366x768
+        self.resize(1366, 768)
+        self.setMinimumSize(1366, 768)
 
         self._build_menu()
         self._build_layout()
@@ -107,7 +109,9 @@ class MainWindow(QtWidgets.QMainWindow):
         splitter.addWidget(self.settings_panel)
         splitter.setStretchFactor(0, 5)
         splitter.setStretchFactor(1, 1)
-        splitter.setSizes([900, 200])
+        # Make settings panel occupy a fixed-ish area on the right and avoid
+        # compressing its contents at small widths.
+        splitter.setSizes([1046, 320])
         splitter.setHandleWidth(1)
 
         central = QtWidgets.QWidget()
