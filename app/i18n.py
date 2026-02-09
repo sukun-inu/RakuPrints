@@ -628,6 +628,33 @@ def set_language(lang: str) -> None:
     _current_language = resolve_language(lang)
 
 
+def broadcast_language_change() -> None:
+    """Call `retranslate()` on top-level widgets if available so UI updates immediately."""
+    try:
+        from PySide6 import QtWidgets
+
+        app = QtWidgets.QApplication.instance()
+        if not app:
+            return
+        for w in app.topLevelWidgets():
+            # Prefer explicit retranslate method when available
+            if hasattr(w, "retranslate") and callable(getattr(w, "retranslate")):
+                try:
+                    w.retranslate()
+                except Exception:
+                    pass
+            # Also try to update children that expose retranslate
+            for child in w.findChildren(QtWidgets.QWidget):
+                if hasattr(child, "retranslate") and callable(getattr(child, "retranslate")):
+                    try:
+                        child.retranslate()
+                    except Exception:
+                        pass
+    except Exception:
+        # Best-effort; don't fail if Qt isn't available
+        return
+
+
 def current_language() -> str:
     return _current_language
 

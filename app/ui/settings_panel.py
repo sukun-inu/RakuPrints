@@ -5,7 +5,7 @@ from typing import Dict
 from PySide6 import QtCore, QtWidgets
 
 from app.model.print_job import DuplexMode
-from app.i18n import t, language_label, LANGUAGES
+from app.i18n import t, language_label, LANGUAGES, set_language, resolve_language, broadcast_language_change
 
 
 class SettingsPanel(QtWidgets.QWidget):
@@ -331,6 +331,13 @@ class SettingsPanel(QtWidgets.QWidget):
     def on_language_changed(self) -> None:
         """Handle language change event."""
         mode = str(self.language_combo.currentData() or "system")
+        # Apply language immediately so UI updates without restart
+        try:
+            set_language(resolve_language(mode))
+            broadcast_language_change()
+        except Exception:
+            pass
+        # Still notify owner to persist the setting
         self.language_changed.emit(mode)
 
     def _update_printer_button(self, use_default: bool, selected_printer: str, default_printer: str) -> None:
