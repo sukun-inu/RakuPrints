@@ -5,7 +5,7 @@ from typing import Dict
 from PySide6 import QtCore, QtWidgets
 
 from app.model.print_job import DuplexMode
-from app.i18n import t, language_label, LANGUAGES, set_language, resolve_language, broadcast_language_change
+from app.i18n import t, language_label, LANGUAGES, current_language
 
 
 class SettingsPanel(QtWidgets.QWidget):
@@ -27,8 +27,23 @@ class SettingsPanel(QtWidgets.QWidget):
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
         # Prevent the settings panel from being compressed too small
-        self.setMinimumWidth(320)
-        layout = QtWidgets.QVBoxLayout(self)
+        self.setMinimumWidth(280)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Expanding)
+        
+        # Create scroll area for vertical scrolling
+        scroll_area = QtWidgets.QScrollArea(self)
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        scroll_area.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        scroll_area.setFrameShape(QtWidgets.QFrame.NoFrame)
+        scroll_area.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        
+        # Create content widget that will be scrollable
+        content_widget = QtWidgets.QWidget()
+        # Set minimum width to prevent horizontal overflow
+        content_widget.setMinimumWidth(260)
+        content_widget.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Minimum)
+        layout = QtWidgets.QVBoxLayout(content_widget)
         layout.setContentsMargins(8, 8, 8, 8)
 
         self.printer_group = QtWidgets.QGroupBox()
@@ -38,7 +53,9 @@ class SettingsPanel(QtWidgets.QWidget):
         self.select_printer_radio = QtWidgets.QRadioButton()
         self.select_printer_button = QtWidgets.QPushButton()
         self.select_printer_button.setEnabled(False)
+        self.select_printer_button.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
         self.printer_settings_button = QtWidgets.QPushButton()
+        self.printer_settings_button.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
 
         printer_layout.addWidget(self.use_default_radio)
         printer_layout.addWidget(self.select_printer_radio)
@@ -94,10 +111,11 @@ class SettingsPanel(QtWidgets.QWidget):
 
         rules_button_row = QtWidgets.QHBoxLayout()
         self.rule_add_button = QtWidgets.QPushButton()
+        self.rule_add_button.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
         self.rule_remove_button = QtWidgets.QPushButton()
+        self.rule_remove_button.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
         rules_button_row.addWidget(self.rule_add_button)
         rules_button_row.addWidget(self.rule_remove_button)
-        rules_button_row.addStretch(1)
         rules_layout.addLayout(rules_button_row)
 
         self.theme_group = QtWidgets.QGroupBox()
@@ -131,6 +149,19 @@ class SettingsPanel(QtWidgets.QWidget):
         layout.addWidget(self.theme_group)
         layout.addWidget(self.update_group)
         layout.addStretch(1)
+        
+        # Set content widget to scroll area
+        scroll_area.setWidget(content_widget)
+        
+        # Set scroll area as main layout
+        main_layout = QtWidgets.QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+        main_layout.addWidget(scroll_area)
+        
+        # Store scroll area reference for potential future use
+        self._scroll_area = scroll_area
+        self._content_widget = content_widget
 
         self._printers: list[str] = []
 
@@ -150,7 +181,8 @@ class SettingsPanel(QtWidgets.QWidget):
         self.rule_add_button.clicked.connect(self._on_rule_add)
         self.rule_remove_button.clicked.connect(self._on_rule_remove)
 
-        self.retranslate()
+        # Don't call retranslate() here - it will be called by MainWindow._apply_language()
+        # after settings are loaded to avoid layout issues on first startup
 
     def retranslate(self) -> None:
         self.printer_group.setTitle(t("settings_printer_group"))
@@ -184,11 +216,15 @@ class SettingsPanel(QtWidgets.QWidget):
 
     def _refresh_duplex_items(self) -> None:
         current = self.duplex_combo.currentData()
+        # Cache enum values to avoid recursion issues
+        duplex_off_value = "しない"
+        duplex_long_value = "長辺とじ"
+        duplex_short_value = "短辺とじ"
         with QtCore.QSignalBlocker(self.duplex_combo):
             self.duplex_combo.clear()
-            self.duplex_combo.addItem(t("duplex_off"), DuplexMode.OFF.value)
-            self.duplex_combo.addItem(t("duplex_long"), DuplexMode.LONG_EDGE.value)
-            self.duplex_combo.addItem(t("duplex_short"), DuplexMode.SHORT_EDGE.value)
+            self.duplex_combo.addItem(t("duplex_off"), duplex_off_value)
+            self.duplex_combo.addItem(t("duplex_long"), duplex_long_value)
+            self.duplex_combo.addItem(t("duplex_short"), duplex_short_value)
         if current:
             index = self.duplex_combo.findData(current)
             if index >= 0:
@@ -220,10 +256,13 @@ class SettingsPanel(QtWidgets.QWidget):
 
     def _refresh_language_items(self) -> None:
         current = self.language_combo.currentData()
+        # Use LANGUAGES directly to avoid recursion in language_label()
+        lang = current_language()
         with QtCore.QSignalBlocker(self.language_combo):
             self.language_combo.clear()
             for code in ["system", "ja", "en", "ko", "zh"]:
-                self.language_combo.addItem(language_label(code), code)
+                label = LANGUAGES.get(code, {}).get(lang, code)
+                self.language_combo.addItem(label, code)
         if current:
             index = self.language_combo.findData(current)
             if index >= 0:
@@ -289,7 +328,10 @@ class SettingsPanel(QtWidgets.QWidget):
         self._printers = list(printers)
 
     def set_rules(self, rules: Dict[str, dict], auto_printer_label: str = "") -> None:
-        self.rules_table.setRowCount(0)
+        # Clear existing rows safely to avoid recursion
+        while self.rules_table.rowCount() > 0:
+            self.rules_table.removeRow(0)
+        
         for row, (ext, rule) in enumerate(sorted(rules.items())):
             self.rules_table.insertRow(row)
             ext_item = QtWidgets.QTableWidgetItem(ext)
@@ -333,13 +375,8 @@ class SettingsPanel(QtWidgets.QWidget):
     def on_language_changed(self) -> None:
         """Handle language change event."""
         mode = str(self.language_combo.currentData() or "system")
-        # Apply language immediately so UI updates without restart
-        try:
-            set_language(resolve_language(mode))
-            broadcast_language_change()
-        except Exception:
-            pass
-        # Still notify owner to persist the setting
+        # Notify owner to persist the setting and update UI
+        # The owner (MainWindow) will handle language change and retranslation
         self.language_changed.emit(mode)
 
     def _update_printer_button(self, use_default: bool, selected_printer: str, default_printer: str) -> None:
@@ -355,7 +392,9 @@ class SettingsPanel(QtWidgets.QWidget):
         self.paper_size_changed.emit(value)
 
     def _on_duplex_changed(self) -> None:
-        value = str(self.duplex_combo.currentData() or DuplexMode.OFF.value)
+        # Use string literal instead of enum value to avoid recursion
+        default_value = "しない"
+        value = str(self.duplex_combo.currentData() or default_value)
         self.duplex_changed.emit(value)
 
     def _on_excel_orientation_changed(self) -> None:

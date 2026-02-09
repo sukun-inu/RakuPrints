@@ -139,7 +139,8 @@ class JobTableModel(QtCore.QAbstractTableModel):
         self._job_manager.sort_jobs(column, descending)
 
     def retranslate(self) -> None:
-        self.headerDataChanged.emit(QtCore.Qt.Horizontal, 0, self.columnCount() - 1)
+        # Only emit layoutChanged to avoid recursion from headerDataChanged
+        # The header will be updated when the view requests headerData()
         self.layoutChanged.emit()
 
     def _headers(self) -> list[str]:
