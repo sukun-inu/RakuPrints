@@ -16,6 +16,8 @@ class JobTableModel(QtCore.QAbstractTableModel):
         self._job_manager.jobs_changed.connect(self._on_jobs_changed)
         self._job_manager.job_updated.connect(self._on_job_updated)
         self._status_icons = self._build_status_icons()
+        self._file_icon_provider = QtWidgets.QFileIconProvider()
+        self._file_icon_cache: dict[str, QtGui.QIcon] = {}
         self._status_colors = {
             JobStatus.WAITING: QtGui.QColor("#9AA0A6"),
             JobStatus.PRINTING: QtGui.QColor("#3B82F6"),
@@ -63,6 +65,9 @@ class JobTableModel(QtCore.QAbstractTableModel):
 
         if role == QtCore.Qt.DecorationRole and column == 7:
             return self._status_icons.get(job.status)
+
+        if role == QtCore.Qt.DecorationRole and column == 1:
+            return self._file_icon(job.file_path, job.extension)
 
         if role == QtCore.Qt.ForegroundRole and column == 7:
             return self._status_colors.get(job.status)
@@ -194,6 +199,20 @@ class JobTableModel(QtCore.QAbstractTableModel):
             summary = job.summary or job.message
             return f"{self._status_text(job.status)}: {summary}"
         return self._status_text(job.status)
+
+    def _file_icon(self, file_path: str, extension: str) -> QtGui.QIcon | None:
+        key = extension.lower() if extension else ""
+        if not key:
+            key = str(file_path)
+        cached = self._file_icon_cache.get(key)
+        if cached is not None:
+            return cached
+        info = QtCore.QFileInfo(file_path)
+        icon = self._file_icon_provider.icon(info)
+        if icon is None or icon.isNull():
+            return None
+        self._file_icon_cache[key] = icon
+        return icon
 
     def _status_text(self, status: JobStatus) -> str:
         mapping = {
