@@ -105,6 +105,7 @@ class MainWindow(QtWidgets.QMainWindow):
         splitter.setOrientation(QtCore.Qt.Horizontal)
 
         self.file_list = FileListView(self._job_manager)
+        self.file_list.apply_column_widths(self._context.settings.file_list_column_widths)
         self.settings_panel = SettingsPanel()
 
         splitter.addWidget(self.file_list)
@@ -137,6 +138,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.file_list.excel_sheets_requested.connect(self._on_excel_sheets_select)
         self.file_list.print_selected_requested.connect(self._on_print_selected)
         self.file_list.printer_selected_requested.connect(self._on_printer_selected)
+        self.file_list.column_widths_changed.connect(self._on_column_widths_changed)
 
         self.settings_panel.use_default_changed.connect(self._on_use_default_changed)
         self.settings_panel.select_printer_clicked.connect(self._on_global_printer_select)
@@ -333,6 +335,11 @@ class MainWindow(QtWidgets.QMainWindow):
             open_printer_properties(printer_name)
         except Exception as exc:
             QtWidgets.QMessageBox.warning(self, t("title_printer"), str(exc))
+
+    def _on_column_widths_changed(self, widths: list[int]) -> None:
+        if widths == self._context.settings.file_list_column_widths:
+            return
+        self._context.update_setting(file_list_column_widths=list(widths))
 
     def _on_rule_printer_changed(self, extension: str, printer: str) -> None:
         self._context.update_rule(extension, printer)
@@ -610,5 +617,4 @@ class MainWindow(QtWidgets.QMainWindow):
             self._taskbar_button.setWindow(window)
             self._taskbar_progress = self._taskbar_button.progress()
             self._taskbar_progress.setMinimum(0)
-
 

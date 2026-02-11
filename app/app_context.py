@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 import json
 
@@ -36,6 +36,7 @@ class UserSettings:
     auto_update_enabled: bool = False
     update_snooze_until: str = ""
     last_update_check: str = ""
+    file_list_column_widths: list[int] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -51,6 +52,7 @@ class UserSettings:
             "auto_update_enabled": self.auto_update_enabled,
             "update_snooze_until": self.update_snooze_until,
             "last_update_check": self.last_update_check,
+            "file_list_column_widths": self.file_list_column_widths,
         }
 
     @classmethod
@@ -72,6 +74,16 @@ class UserSettings:
             language_mode = "system"
         else:
             language_mode = resolve_language(language_mode)
+        widths_raw = data.get("file_list_column_widths", [])
+        widths: list[int] = []
+        if isinstance(widths_raw, list):
+            for item in widths_raw:
+                try:
+                    width = int(item)
+                except (TypeError, ValueError):
+                    continue
+                if width > 0:
+                    widths.append(width)
         return cls(
             use_default_printer=bool(data.get("use_default_printer", True)),
             selected_printer=str(data.get("selected_printer", "")),
@@ -85,6 +97,7 @@ class UserSettings:
             auto_update_enabled=bool(data.get("auto_update_enabled", False)),
             update_snooze_until=str(data.get("update_snooze_until", "")),
             last_update_check=str(data.get("last_update_check", "")),
+            file_list_column_widths=widths,
         )
 
 
