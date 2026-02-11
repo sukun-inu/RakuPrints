@@ -7,6 +7,7 @@ from PySide6 import QtCore
 
 from app.app_context import AppContext
 from app.controller.rules_engine import RulesEngine
+from app.controller.page_count_worker import PageCountWorker, PageCountRequest
 from app.model.print_job import PrintJob, FileType, JobStatus
 from app.backend.printer_utils import get_default_printer_name
 from app.backend.excel_backend import ExcelBackend
@@ -22,6 +23,8 @@ class JobManager(QtCore.QObject):
         self._context = context
         self._rules = RulesEngine(context)
         self._jobs: List[PrintJob] = []
+        self._page_count_worker: PageCountWorker | None = None
+        self._pending_page_count: list[PageCountRequest] = []
 
     def jobs(self) -> List[PrintJob]:
         return list(self._jobs)
@@ -40,10 +43,12 @@ class JobManager(QtCore.QObject):
 
     def clear(self) -> None:
         self._jobs.clear()
+        self._pending_page_count = []
         self.jobs_changed.emit()
 
     def add_files(self, file_paths: List[str]) -> None:
         added = False
+        added_jobs: List[PrintJob] = []
         for path in file_paths:
             normalized = str(Path(path))
             if any(job.file_path == normalized for job in self._jobs):
@@ -61,9 +66,11 @@ class JobManager(QtCore.QObject):
                 paper_size=self._context.settings.paper_size,
             )
             self._jobs.append(job)
+            added_jobs.append(job)
             added = True
         if added:
             self.jobs_changed.emit()
+            self._queue_page_counts(added_jobs)
 
     def add_folder(self, folder_path: str, recursive: bool = True) -> None:
         folder = Path(folder_path)
@@ -137,6 +144,7 @@ class JobManager(QtCore.QObject):
             return
         job.excel_sheets = list(sheet_names)
         self.job_updated.emit(job_id)
+        self._queue_page_counts([job])
 
     def list_excel_sheets(self, file_path: str) -> list[str]:
         backend = ExcelBackend(self._context)
@@ -235,8 +243,10 @@ class JobManager(QtCore.QObject):
             if column == 5:
                 return self._sheets_for_job(job).lower()
             if column == 6:
-                return (job.printer_name or t("label_auto")).lower()
+                return job.page_count if job.page_count is not None else -1
             if column == 7:
+                return (job.printer_name or t("label_auto")).lower()
+            if column == 8:
                 return self._status_text(job.status).lower()
             return ""
 
@@ -283,6 +293,59 @@ class JobManager(QtCore.QObject):
         else:
             default_printer = self._context.settings.selected_printer
         return self._rules.resolve_printer(file_path, default_printer)
+
+    def _queue_page_counts(self, jobs: list[PrintJob]) -> None:
+        if not jobs:
+            return
+        for job in jobs:
+            job.page_count_revision += 1
+            job.page_count = None
+            job.page_count_failed = False
+            request = PageCountRequest(
+                job_id=job.id,
+                file_path=job.file_path,
+                file_type=job.file_type,
+                excel_sheets=list(job.excel_sheets),
+                revision=job.page_count_revision,
+            )
+            self._pending_page_count.append(request)
+            self.job_updated.emit(job.id)
+        self._start_page_count_worker()
+
+    def _start_page_count_worker(self) -> None:
+        if self._page_count_worker and self._page_count_worker.isRunning():
+            return
+        if not self._pending_page_count:
+            return
+        batch = self._pending_page_count
+        self._pending_page_count = []
+        worker = PageCountWorker(batch)
+        worker.page_count_ready.connect(self._on_page_count_ready)
+        worker.page_count_failed.connect(self._on_page_count_failed)
+        worker.finished.connect(self._on_page_count_finished)
+        self._page_count_worker = worker
+        worker.start()
+
+    def _on_page_count_ready(self, job_id: str, count: int, revision: int) -> None:
+        job = self.find_job_by_id(job_id)
+        if not job or job.page_count_revision != revision:
+            return
+        job.page_count = count
+        job.page_count_failed = False
+        self.job_updated.emit(job_id)
+
+    def _on_page_count_failed(self, job_id: str, revision: int) -> None:
+        job = self.find_job_by_id(job_id)
+        if not job or job.page_count_revision != revision:
+            return
+        job.page_count = None
+        job.page_count_failed = True
+        self.job_updated.emit(job_id)
+
+    def _on_page_count_finished(self) -> None:
+        self._page_count_worker = None
+        if self._pending_page_count:
+            self._start_page_count_worker()
 
     @staticmethod
     def _detect_file_type(file_path: str) -> FileType:

@@ -16,6 +16,8 @@ class JobTableModel(QtCore.QAbstractTableModel):
         self._job_manager.jobs_changed.connect(self._on_jobs_changed)
         self._job_manager.job_updated.connect(self._on_job_updated)
         self._status_icons = self._build_status_icons()
+        self._file_icon_provider = QtWidgets.QFileIconProvider()
+        self._file_icon_cache: dict[str, QtGui.QIcon] = {}
         self._status_colors = {
             JobStatus.WAITING: QtGui.QColor("#9AA0A6"),
             JobStatus.PRINTING: QtGui.QColor("#3B82F6"),
@@ -57,14 +59,19 @@ class JobTableModel(QtCore.QAbstractTableModel):
             if column == 5:
                 return self._format_sheets(job)
             if column == 6:
-                return self._format_printer(job)
+                return self._format_pages(job)
             if column == 7:
+                return self._format_printer(job)
+            if column == 8:
                 return self._format_status(job)
 
-        if role == QtCore.Qt.DecorationRole and column == 7:
+        if role == QtCore.Qt.DecorationRole and column == 8:
             return self._status_icons.get(job.status)
 
-        if role == QtCore.Qt.ForegroundRole and column == 7:
+        if role == QtCore.Qt.DecorationRole and column == 1:
+            return self._file_icon(job.file_path, job.extension)
+
+        if role == QtCore.Qt.ForegroundRole and column == 8:
             return self._status_colors.get(job.status)
 
         if role == QtCore.Qt.ToolTipRole:
@@ -151,6 +158,7 @@ class JobTableModel(QtCore.QAbstractTableModel):
             t("table_type"),
             t("table_label"),
             t("table_sheet"),
+            t("table_pages"),
             t("table_printer"),
             t("table_status"),
         ]
@@ -186,6 +194,13 @@ class JobTableModel(QtCore.QAbstractTableModel):
         joined = ", ".join(job.excel_sheets)
         return joined if len(joined) <= 20 else f"{joined[:17]}..."
 
+    def _format_pages(self, job) -> str:
+        if job.page_count is not None:
+            return str(job.page_count)
+        if job.page_count_failed:
+            return "-"
+        return "..."
+
     def _format_printer(self, job) -> str:
         return job.printer_name or t("label_auto")
 
@@ -194,6 +209,20 @@ class JobTableModel(QtCore.QAbstractTableModel):
             summary = job.summary or job.message
             return f"{self._status_text(job.status)}: {summary}"
         return self._status_text(job.status)
+
+    def _file_icon(self, file_path: str, extension: str) -> QtGui.QIcon | None:
+        key = extension.lower() if extension else ""
+        if not key:
+            key = str(file_path)
+        cached = self._file_icon_cache.get(key)
+        if cached is not None:
+            return cached
+        info = QtCore.QFileInfo(file_path)
+        icon = self._file_icon_provider.icon(info)
+        if icon is None or icon.isNull():
+            return None
+        self._file_icon_cache[key] = icon
+        return icon
 
     def _status_text(self, status: JobStatus) -> str:
         mapping = {
@@ -259,10 +288,17 @@ class FileListView(QtWidgets.QTableView):
     excel_sheets_requested = QtCore.Signal(str)
     print_selected_requested = QtCore.Signal(list)
     printer_selected_requested = QtCore.Signal(list)
+    column_widths_changed = QtCore.Signal(list)
 
     def __init__(self, job_manager: JobManager, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
         self._job_manager = job_manager
+        self._auto_resize_columns = True
+        self._suppress_width_signal = False
+        self._column_width_timer = QtCore.QTimer(self)
+        self._column_width_timer.setSingleShot(True)
+        self._column_width_timer.setInterval(400)
+        self._column_width_timer.timeout.connect(self._emit_column_widths)
         self.setAcceptDrops(True)
         self.setDragEnabled(True)
         self.setDropIndicatorShown(True)
@@ -292,9 +328,27 @@ class FileListView(QtWidgets.QTableView):
         self.setShowGrid(True)
         self.doubleClicked.connect(self._on_double_click)
         self.customContextMenuRequested.connect(self._on_context_menu)
+        header.sectionResized.connect(self._on_section_resized)
+        self._job_manager.jobs_changed.connect(self._on_jobs_changed)
 
     def retranslate(self) -> None:
         self._model.retranslate()
+        if self._auto_resize_columns:
+            QtCore.QTimer.singleShot(0, self._resize_columns_to_contents)
+
+    def apply_column_widths(self, widths: list[int] | None) -> None:
+        self._suppress_width_signal = True
+        try:
+            if widths and len(widths) == self._model.columnCount():
+                self._auto_resize_columns = False
+                for index, width in enumerate(widths):
+                    if width > 0:
+                        self.setColumnWidth(index, width)
+            else:
+                self._auto_resize_columns = True
+                self._resize_columns_to_contents()
+        finally:
+            self._suppress_width_signal = False
 
     def dragEnterEvent(self, event: QtGui.QDragEnterEvent) -> None:
         if event.mimeData().hasUrls():
@@ -323,9 +377,30 @@ class FileListView(QtWidgets.QTableView):
     def _on_double_click(self, index: QtCore.QModelIndex) -> None:
         if not index.isValid():
             return
-        if index.column() == 6:
+        if index.column() == 7:
             job = self._job_manager.get_job(index.row())
             self.printer_requested.emit(job.id)
+
+    def _on_section_resized(self, _index: int, _old: int, _new: int) -> None:
+        if self._suppress_width_signal:
+            return
+        self._auto_resize_columns = False
+        self._column_width_timer.start()
+
+    def _emit_column_widths(self) -> None:
+        widths = [self.columnWidth(i) for i in range(self._model.columnCount())]
+        self.column_widths_changed.emit(widths)
+
+    def _resize_columns_to_contents(self) -> None:
+        self._suppress_width_signal = True
+        try:
+            self.resizeColumnsToContents()
+        finally:
+            self._suppress_width_signal = False
+
+    def _on_jobs_changed(self) -> None:
+        if self._auto_resize_columns:
+            QtCore.QTimer.singleShot(0, self._resize_columns_to_contents)
 
     def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
         if event.button() == QtCore.Qt.LeftButton:

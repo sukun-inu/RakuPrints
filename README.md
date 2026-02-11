@@ -3,7 +3,7 @@
 
 <img src="assets/icon.png" width="80">
 
-**Version: 0.1.3**
+**Version: 0.1.5**
 
 **※ Excel・Word・PowerPointファイルの印刷には Microsoft Office が必須です（PDF印刷は不要）**
 

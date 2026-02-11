@@ -45,6 +45,9 @@ class PrintJob:
     excel_sheets: List[str] = field(default_factory=list)
     excel_auto_orientation: bool = False
     paper_size: str = ""
+    page_count: int | None = None
+    page_count_failed: bool = False
+    page_count_revision: int = 0
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
     @property
