@@ -26,6 +26,32 @@ def _apply_paper_size(printer: QtPrintSupport.QPrinter, name: str) -> None:
             break
 
 
+def _centering_target_rect(printer: QtPrintSupport.QPrinter) -> QtCore.QRect:
+    page_rect = printer.pageRect(QtPrintSupport.QPrinter.DevicePixel)
+    paper_rect = printer.paperRect(QtPrintSupport.QPrinter.DevicePixel)
+    if page_rect.isNull() or paper_rect.isNull():
+        return page_rect
+
+    left_margin = page_rect.x() - paper_rect.x()
+    top_margin = page_rect.y() - paper_rect.y()
+    right_margin = (paper_rect.x() + paper_rect.width()) - (page_rect.x() + page_rect.width())
+    bottom_margin = (paper_rect.y() + paper_rect.height()) - (page_rect.y() + page_rect.height())
+
+    left_margin = max(0, left_margin)
+    right_margin = max(0, right_margin)
+    top_margin = max(0, top_margin)
+    bottom_margin = max(0, bottom_margin)
+
+    safe_width = paper_rect.width() - 2 * max(left_margin, right_margin)
+    safe_height = paper_rect.height() - 2 * max(top_margin, bottom_margin)
+    if safe_width <= 0 or safe_height <= 0:
+        return page_rect
+
+    x = paper_rect.x() + (paper_rect.width() - safe_width) // 2
+    y = paper_rect.y() + (paper_rect.height() - safe_height) // 2
+    return QtCore.QRect(x, y, safe_width, safe_height)
+
+
 def _read_payload() -> dict:
     raw = sys.stdin.read()
     if not raw:
@@ -83,6 +109,7 @@ def main() -> int:
             return 6
 
         printer = QtPrintSupport.QPrinter(QtPrintSupport.QPrinter.HighResolution)
+        printer.setFullPage(True)
         if printer_name:
             printer.setPrinterName(printer_name)
         if copies > 0:
@@ -102,6 +129,12 @@ def main() -> int:
 
         target_dpi = int(payload.get("dpi", 600))
         scale = target_dpi / 72.0
+        target_rect = _centering_target_rect(printer)
+        target_size = (
+            target_rect.size().toSize()
+            if hasattr(target_rect.size(), "toSize")
+            else target_rect.size()
+        )
         for page_index in range(page_start, page_end + 1):
             if page_index > page_start:
                 printer.newPage()
@@ -115,15 +148,13 @@ def main() -> int:
                 QtGui.QImage.Format_RGB888,
             ).copy()
 
-            page_rect = printer.pageRect(QtPrintSupport.QPrinter.DevicePixel)
-            target_size = page_rect.size().toSize() if hasattr(page_rect.size(), "toSize") else page_rect.size()
             scaled = image.scaled(
                 target_size,
                 QtCore.Qt.KeepAspectRatio,
                 QtCore.Qt.SmoothTransformation,
             )
-            x = page_rect.x() + (page_rect.width() - scaled.width()) // 2
-            y = page_rect.y() + (page_rect.height() - scaled.height()) // 2
+            x = target_rect.x() + (target_rect.width() - scaled.width()) // 2
+            y = target_rect.y() + (target_rect.height() - scaled.height()) // 2
             painter.drawImage(QtCore.QPoint(x, y), scaled)
     except Exception as exc:
         print(str(exc) or "PDF print failed", file=sys.stderr)
