@@ -32,6 +32,7 @@ class WordBackend:
             paper_const = _word_paper_constant(job.paper_size, win32com.client.constants)
             if paper_const is not None:
                 doc.PageSetup.PaperSize = paper_const
+            _apply_word_centering(doc)
             doc.PrintOut(Copies=job.copies, Background=False)
             _wait_for_print_queue(app)
         finally:
@@ -75,3 +76,31 @@ def _word_paper_constant(name: str, constants) -> int | None:
                 if value is not None:
                     return value
     return None
+
+
+def _apply_word_centering(doc) -> None:
+    try:
+        page_setup = doc.PageSetup
+    except Exception:
+        return
+
+    try:
+        page_setup.MirrorMargins = False
+    except Exception:
+        pass
+
+    try:
+        left = float(page_setup.LeftMargin)
+        right = float(page_setup.RightMargin)
+    except Exception:
+        return
+
+    if abs(left - right) < 0.01:
+        return
+
+    avg = (left + right) / 2
+    try:
+        page_setup.LeftMargin = avg
+        page_setup.RightMargin = avg
+    except Exception:
+        pass

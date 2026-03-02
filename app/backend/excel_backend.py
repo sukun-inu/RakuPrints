@@ -102,13 +102,15 @@ class ExcelBackend:
                         sheet.PageSetup.PaperSize = paper_const
                     if auto_orientation:
                         sheet.PageSetup.Orientation = _suggest_sheet_orientation(sheet, win32com.client.constants)
+                    _apply_sheet_centering(sheet)
                     sheet.PrintOut(Copies=job.copies)
             else:
-                if paper_const is not None:
-                    for sheet in workbook.Worksheets:
+                for sheet in workbook.Worksheets:
+                    if paper_const is not None:
                         sheet.PageSetup.PaperSize = paper_const
-                        if auto_orientation:
-                            sheet.PageSetup.Orientation = _suggest_sheet_orientation(sheet, win32com.client.constants)
+                    if auto_orientation:
+                        sheet.PageSetup.Orientation = _suggest_sheet_orientation(sheet, win32com.client.constants)
+                    _apply_sheet_centering(sheet)
                 workbook.PrintOut(Copies=job.copies)
             _wait_for_print_queue(app)
         finally:
@@ -154,6 +156,17 @@ def _excel_paper_constant(name: str, constants) -> int | None:
                 if value is not None:
                     return value
     return None
+
+
+def _apply_sheet_centering(sheet) -> None:
+    try:
+        sheet.PageSetup.CenterHorizontally = True
+    except Exception:
+        pass
+    try:
+        sheet.PageSetup.CenterVertically = True
+    except Exception:
+        pass
 
 
 def _suggest_sheet_orientation(sheet, constants) -> int:
