@@ -283,8 +283,9 @@ class SettingsPanel(QtWidgets.QWidget):
     ) -> None:
         with QtCore.QSignalBlocker(self.use_default_radio), QtCore.QSignalBlocker(self.select_printer_radio), \
                 QtCore.QSignalBlocker(self.copies_spin), QtCore.QSignalBlocker(self.duplex_combo), \
-                QtCore.QSignalBlocker(self.theme_combo), QtCore.QSignalBlocker(self.language_combo), \
-                QtCore.QSignalBlocker(self.update_check_box), QtCore.QSignalBlocker(self.auto_update_box):
+                QtCore.QSignalBlocker(self.excel_orientation_combo), QtCore.QSignalBlocker(self.theme_combo), \
+                QtCore.QSignalBlocker(self.language_combo), QtCore.QSignalBlocker(self.update_check_box), \
+                QtCore.QSignalBlocker(self.auto_update_box):
             self.use_default_radio.setChecked(use_default)
             self.select_printer_radio.setChecked(not use_default)
             self.select_printer_button.setEnabled(not use_default)
@@ -439,6 +440,5 @@ class SettingsPanel(QtWidgets.QWidget):
                 extensions.append(item.text())
         if extensions:
             self.rule_remove_requested.emit(extensions)
-
 
 

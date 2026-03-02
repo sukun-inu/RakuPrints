@@ -4,7 +4,29 @@ import gc
 import time
 
 from app.app_context import AppContext
+from app.backend.paper_utils import is_supported_name
+from app.backend.printer_utils import get_default_printer_name, list_paper_sizes
 from app.model.print_job import PrintJob
+
+
+def _resolve_printer_name(job: PrintJob) -> str:
+    if job.printer_name:
+        return job.printer_name
+    try:
+        return get_default_printer_name()
+    except Exception:
+        return ""
+
+
+def _assert_printer_paper_supported(printer_name: str, paper_size: str) -> None:
+    if not printer_name or not paper_size:
+        return
+    try:
+        sizes = list_paper_sizes(printer_name)
+    except Exception:
+        return
+    if sizes and not is_supported_name(paper_size, sizes):
+        raise RuntimeError("プリンターが選択した用紙サイズに対応していません。")
 
 
 class WordBackend:
@@ -27,10 +49,15 @@ class WordBackend:
             if hasattr(app, "DisplayAlerts"):
                 app.DisplayAlerts = False
             doc = app.Documents.Open(job.file_path, ReadOnly=True)
+            printer_name = _resolve_printer_name(job)
+            _assert_printer_paper_supported(printer_name, job.paper_size)
             if job.printer_name:
                 app.ActivePrinter = job.printer_name
             paper_const = _word_paper_constant(job.paper_size, win32com.client.constants)
             if paper_const is not None:
+                doc_const = doc.PageSetup.PaperSize
+                if doc_const != paper_const:
+                    raise RuntimeError("Word の用紙サイズが選択したサイズと一致しません。")
                 doc.PageSetup.PaperSize = paper_const
             _apply_word_centering(doc)
             doc.PrintOut(Copies=job.copies, Background=False)
