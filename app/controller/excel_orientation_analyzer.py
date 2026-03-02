@@ -52,10 +52,10 @@ class ExcelOrientationAnalyzer(QtCore.QThread):
                         used = sheet.UsedRange
                         width = float(used.Width)
                         height = float(used.Height)
-                    if width > height * 1.05:
-                        landscape += 1
-                    else:
-                        portrait += 1
+                        if width > height * 1.05:
+                            landscape += 1
+                        else:
+                            portrait += 1
                     recommendation = "横向き" if landscape > portrait else "縦向き"
                     reason = "横幅 > 縦幅" if recommendation == "横向き" else "縦幅 >= 横幅"
                     results.append(

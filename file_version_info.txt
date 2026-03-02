@@ -18,12 +18,12 @@ VSVersionInfo(
           [
             StringStruct(u'CompanyName', u'Hibiki Suzuki'),
             StringStruct(u'FileDescription', u'らーく印刷 - 印刷ジョブ管理ツール'),
-            StringStruct(u'FileVersion', u'0.1.6'),
+            StringStruct(u'FileVersion', u'0.1.7'),
             StringStruct(u'InternalName', u'RakuPrint'),
             StringStruct(u'LegalCopyright', u'Copyright © 2026 Hibiki Suzuki'),
             StringStruct(u'OriginalFilename', u'RakuPrint.exe'),
             StringStruct(u'ProductName', u'らーく印刷'),
-            StringStruct(u'ProductVersion', u'0.1.6'),
+            StringStruct(u'ProductVersion', u'0.1.7'),
           ]
         )
       ]

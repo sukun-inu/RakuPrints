@@ -84,10 +84,16 @@ class UserSettings:
                     continue
                 if width > 0:
                     widths.append(width)
+        try:
+            copies = int(data.get("copies", 1))
+        except (TypeError, ValueError):
+            copies = 1
+        if copies < 1:
+            copies = 1
         return cls(
             use_default_printer=bool(data.get("use_default_printer", True)),
             selected_printer=str(data.get("selected_printer", "")),
-            copies=int(data.get("copies", 1)),
+            copies=copies,
             duplex=duplex,
             theme_mode=str(data.get("theme_mode", "system")),
             paper_size=str(data.get("paper_size", "")),

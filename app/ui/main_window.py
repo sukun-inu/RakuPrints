@@ -18,6 +18,7 @@ from app.backend.printer_utils import (
     open_printer_properties,
     list_paper_sizes,
 )
+from app.backend.paper_utils import is_supported_name
 from app.ui.file_list_view import FileListView
 from app.ui.settings_panel import SettingsPanel
 from app.ui.printer_selector import PrinterSelectorDialog
@@ -497,13 +498,19 @@ class MainWindow(QtWidgets.QMainWindow):
             else settings.selected_printer
         )
         sizes = list_paper_sizes(printer_name) if printer_name else []
+        current = settings.paper_size
+        if sizes and current and not is_supported_name(current, sizes):
+            with QtCore.QSignalBlocker(self._context):
+                self._context.update_setting(paper_size="")
+            self._job_manager.apply_settings_to_jobs()
+            current = ""
         if sizes:
             enabled = True
             tooltip = ""
         else:
             enabled = False
             tooltip = t("paper_size_unavailable")
-        self.settings_panel.set_paper_sizes(sizes, settings.paper_size, enabled, tooltip)
+        self.settings_panel.set_paper_sizes(sizes, current, enabled, tooltip)
 
     def _on_log_summary(self) -> None:
         items = []
@@ -617,4 +624,3 @@ class MainWindow(QtWidgets.QMainWindow):
             self._taskbar_button.setWindow(window)
             self._taskbar_progress = self._taskbar_button.progress()
             self._taskbar_progress.setMinimum(0)
-

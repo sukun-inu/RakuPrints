@@ -186,6 +186,12 @@ class JobManager(QtCore.QObject):
             return "PDF 印刷に必要な部品が見つかりません。"
         if "pywin32" in text or "win32com" in text:
             return "Office 印刷に必要な部品が見つかりません。"
+        if "用紙サイズ" in message or "paper size" in text:
+            if "一致" in message or "match" in text:
+                return "用紙サイズが一致しません。"
+            if "対応" in message or "support" in text:
+                return "プリンターが用紙サイズに対応していません。"
+            return "用紙サイズに問題があります。"
         if "ファイルが見つかりません" in message or "file not found" in text:
             return "ファイルが見つかりません。"
         if "printer" in text or "プリンター" in message:
