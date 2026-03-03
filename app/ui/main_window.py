@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets, QtPrintSupport
 
 try:
     from PySide6.QtWinExtras import QWinTaskbarButton  # type: ignore
@@ -18,6 +18,8 @@ from app.backend.printer_utils import (
     open_printer_properties,
     list_paper_sizes,
 )
+from app.backend.qt_print_utils import apply_qt_paper_size
+from app.backend.pdf_options import resolve_pdf_options
 from app.backend.paper_utils import is_supported_name
 from app.ui.file_list_view import FileListView
 from app.ui.settings_panel import SettingsPanel
@@ -28,6 +30,7 @@ from app.ui.log_summary_dialog import LogSummaryDialog
 from app.ui.theme import apply_theme
 from app.ui.excel_sheet_selector import ExcelSheetSelectorDialog
 from app.ui.excel_orientation_dialog import ExcelOrientationDialog
+from app.ui.pdf_options_dialog import PdfOptionsDialog
 from app.controller.excel_orientation_analyzer import ExcelOrientationAnalyzer
 from app.i18n import t, set_language, resolve_language
 
@@ -139,6 +142,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.file_list.excel_sheets_requested.connect(self._on_excel_sheets_select)
         self.file_list.print_selected_requested.connect(self._on_print_selected)
         self.file_list.printer_selected_requested.connect(self._on_printer_selected)
+        self.file_list.pdf_options_requested.connect(self._on_pdf_options_requested)
         self.file_list.column_widths_changed.connect(self._on_column_widths_changed)
 
         self.settings_panel.use_default_changed.connect(self._on_use_default_changed)
@@ -147,6 +151,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.settings_panel.copies_changed.connect(self._on_copies_changed)
         self.settings_panel.duplex_changed.connect(self._on_duplex_changed)
         self.settings_panel.excel_orientation_mode_changed.connect(self._on_excel_orientation_mode_changed)
+        self.settings_panel.pdf_auto_rotate_changed.connect(self._on_pdf_auto_rotate_changed)
+        self.settings_panel.pdf_center_changed.connect(self._on_pdf_center_changed)
+        self.settings_panel.pdf_scale_mode_changed.connect(self._on_pdf_scale_mode_changed)
+        self.settings_panel.pdf_scale_percent_changed.connect(self._on_pdf_scale_percent_changed)
+        self.settings_panel.pdf_scale_reset_requested.connect(self._on_pdf_scale_reset_requested)
+        self.settings_panel.pdf_warn_clip_changed.connect(self._on_pdf_warn_clip_changed)
+        self.settings_panel.pdf_test_page_requested.connect(self._on_pdf_test_page_requested)
         self.settings_panel.rule_printer_changed.connect(self._on_rule_printer_changed)
         self.settings_panel.rule_add_requested.connect(self._on_rule_add)
         self.settings_panel.rule_remove_requested.connect(self._on_rule_remove)
@@ -202,6 +213,10 @@ class MainWindow(QtWidgets.QMainWindow):
             selected_printer=settings.selected_printer,
             default_printer=default_printer,
             excel_orientation_mode=settings.excel_orientation_mode,
+            pdf_scale_mode=settings.pdf_scale_mode,
+            pdf_auto_rotate=settings.pdf_auto_rotate,
+            pdf_center=settings.pdf_center,
+            pdf_warn_clip=settings.pdf_warn_if_clip,
             language_mode=settings.language_mode,
             update_check_enabled=settings.update_check_enabled,
             auto_update_enabled=settings.auto_update_enabled,
@@ -299,6 +314,121 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _on_excel_orientation_mode_changed(self, mode: str) -> None:
         self._context.update_setting(excel_orientation_mode=mode)
+
+    def _on_pdf_auto_rotate_changed(self, enabled: bool) -> None:
+        self._context.update_setting(pdf_auto_rotate=enabled)
+
+    def _on_pdf_center_changed(self, enabled: bool) -> None:
+        self._context.update_setting(pdf_center=enabled)
+
+    def _on_pdf_scale_mode_changed(self, mode: str) -> None:
+        self._context.update_setting(pdf_scale_mode=mode)
+
+    def _on_pdf_warn_clip_changed(self, enabled: bool) -> None:
+        self._context.update_setting(pdf_warn_if_clip=enabled)
+
+    def _on_pdf_scale_percent_changed(self, value: int) -> None:
+        printer_name = self._current_printer_name()
+        settings = self._context.settings
+        if printer_name:
+            updated = dict(settings.pdf_printer_scale)
+            updated[printer_name] = value
+            self._context.update_setting(pdf_printer_scale=updated)
+        else:
+            self._context.update_setting(pdf_scale_percent=value)
+
+    def _on_pdf_scale_reset_requested(self) -> None:
+        printer_name = self._current_printer_name()
+        if not printer_name:
+            return
+        settings = self._context.settings
+        if printer_name not in settings.pdf_printer_scale:
+            return
+        updated = dict(settings.pdf_printer_scale)
+        updated.pop(printer_name, None)
+        self._context.update_setting(pdf_printer_scale=updated)
+
+    def _on_pdf_test_page_requested(self) -> None:
+        printer_name = self._current_printer_name()
+        if not printer_name:
+            QtWidgets.QMessageBox.information(self, t("title_printer"), t("msg_printer_not_selected"))
+            return
+        printer = QtPrintSupport.QPrinter(QtPrintSupport.QPrinter.HighResolution)
+        printer.setPrinterName(printer_name)
+        paper_size = self._context.settings.paper_size
+        if paper_size:
+            apply_qt_paper_size(printer, paper_size)
+        painter = QtGui.QPainter()
+        if not painter.begin(printer):
+            QtWidgets.QMessageBox.warning(self, t("title_print"), t("msg_pdf_test_failed"))
+            return
+        try:
+            paper_rect = printer.paperRect(QtPrintSupport.QPrinter.DevicePixel)
+            page_rect = printer.pageRect(QtPrintSupport.QPrinter.DevicePixel)
+            paper_pen = QtGui.QPen(QtGui.QColor("#9CA3AF"), 2, QtCore.Qt.DashLine)
+            page_pen = QtGui.QPen(QtGui.QColor("#DC2626"), 2)
+            painter.setPen(paper_pen)
+            painter.drawRect(paper_rect)
+            painter.setPen(page_pen)
+            painter.drawRect(page_rect)
+            center = page_rect.center()
+            painter.drawLine(center.x() - 20, center.y(), center.x() + 20, center.y())
+            painter.drawLine(center.x(), center.y() - 20, center.x(), center.y() + 20)
+            painter.setPen(QtGui.QColor("#111827"))
+            font = painter.font()
+            font.setPointSize(10)
+            painter.setFont(font)
+            painter.drawText(page_rect.adjusted(12, 12, -12, -12), QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft,
+                             t("msg_pdf_test_label"))
+        finally:
+            painter.end()
+
+    def _on_pdf_options_requested(self, job_ids: list[str]) -> None:
+        ids = set(job_ids)
+        jobs = [job for job in self._job_manager.jobs() if job.id in ids and job.file_type == FileType.PDF]
+        if not jobs:
+            QtWidgets.QMessageBox.information(self, t("title_print"), t("msg_no_selected_rows"))
+            return
+        options, ok = PdfOptionsDialog.get_options(len(jobs), self)
+        if not ok:
+            return
+        changed = False
+        for job in jobs:
+            if options.scale_mode == "default":
+                job.pdf_scale_mode = None
+                changed = True
+            elif options.scale_mode in ("fit", "shrink", "none"):
+                job.pdf_scale_mode = options.scale_mode
+                changed = True
+
+            if options.scale_percent_mode == "default":
+                job.pdf_scale_percent = None
+                changed = True
+            elif options.scale_percent_mode == "custom":
+                job.pdf_scale_percent = options.scale_percent
+                changed = True
+
+            if options.auto_rotate == "default":
+                job.pdf_auto_rotate = None
+                changed = True
+            elif options.auto_rotate == "on":
+                job.pdf_auto_rotate = True
+                changed = True
+            elif options.auto_rotate == "off":
+                job.pdf_auto_rotate = False
+                changed = True
+
+            if options.center == "default":
+                job.pdf_center = None
+                changed = True
+            elif options.center == "on":
+                job.pdf_center = True
+                changed = True
+            elif options.center == "off":
+                job.pdf_center = False
+                changed = True
+        if changed:
+            self._job_manager.jobs_changed.emit()
 
     def _on_theme_changed(self, mode: str) -> None:
         self._context.update_setting(theme_mode=mode)
@@ -418,6 +548,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self._start_executor(failed_jobs)
 
     def _start_executor(self, jobs) -> None:
+        if not self._confirm_pdf_clipping(jobs):
+            self._lock_ui(False)
+            return
         self._executor = JobExecutor(self._context, self._job_manager, jobs)
         self._executor.job_status.connect(self._job_manager.set_job_status)
         self._executor.progress.connect(self._on_progress)
@@ -431,6 +564,44 @@ class MainWindow(QtWidgets.QMainWindow):
         self._set_taskbar_total(len(jobs))
 
         self._executor.start()
+
+    def _confirm_pdf_clipping(self, jobs) -> bool:
+        settings = self._context.settings
+        if not settings.pdf_warn_if_clip:
+            return True
+        pdf_jobs = [job for job in jobs if job.file_type == FileType.PDF]
+        if not pdf_jobs:
+            return True
+        warned = False
+        for job in pdf_jobs:
+            options = resolve_pdf_options(job, settings)
+            if options.scale_mode != "none":
+                continue
+            if self._printer_has_margins(job.printer_name, job.paper_size):
+                warned = True
+                break
+        if not warned:
+            return True
+        result = QtWidgets.QMessageBox.warning(
+            self,
+            t("title_print"),
+            t("msg_pdf_clip_warning"),
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+        )
+        return result == QtWidgets.QMessageBox.Yes
+
+    def _printer_has_margins(self, printer_name: str, paper_size: str) -> bool:
+        if not printer_name:
+            return False
+        printer = QtPrintSupport.QPrinter(QtPrintSupport.QPrinter.HighResolution)
+        printer.setPrinterName(printer_name)
+        if paper_size:
+            apply_qt_paper_size(printer, paper_size)
+        page_rect = printer.pageRect(QtPrintSupport.QPrinter.DevicePixel)
+        paper_rect = printer.paperRect(QtPrintSupport.QPrinter.DevicePixel)
+        if page_rect.isNull() or paper_rect.isNull():
+            return False
+        return (paper_rect.width() - page_rect.width() > 2) or (paper_rect.height() - page_rect.height() > 2)
 
     def _on_progress(self, completed: int, total: int, current: str) -> None:
         if self._progress_dialog:
@@ -511,6 +682,28 @@ class MainWindow(QtWidgets.QMainWindow):
             enabled = False
             tooltip = t("paper_size_unavailable")
         self.settings_panel.set_paper_sizes(sizes, current, enabled, tooltip)
+        self._refresh_pdf_scale()
+
+    def _current_printer_name(self) -> str:
+        settings = self._context.settings
+        if settings.use_default_printer:
+            return self._get_default_printer_name()
+        return settings.selected_printer
+
+    def _refresh_pdf_scale(self) -> None:
+        settings = self._context.settings
+        printer_name = self._current_printer_name()
+        if printer_name:
+            percent = settings.pdf_printer_scale.get(printer_name, settings.pdf_scale_percent)
+            has_override = printer_name in settings.pdf_printer_scale
+            tooltip = t("settings_pdf_scale_tooltip_fmt", printer=printer_name)
+            enabled = True
+        else:
+            percent = settings.pdf_scale_percent
+            has_override = False
+            tooltip = t("msg_printer_not_selected")
+            enabled = False
+        self.settings_panel.set_pdf_scale(percent, enabled, has_override, tooltip)
 
     def _on_log_summary(self) -> None:
         items = []

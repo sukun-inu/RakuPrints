@@ -8,6 +8,7 @@ import sys
 
 from app.app_context import AppContext
 from app.model.print_job import PrintJob
+from app.backend.pdf_options import resolve_pdf_options
 from app.backend.paper_utils import is_supported_name, normalize_name, size_key_from_points
 from app.backend.printer_utils import get_default_printer_name, list_paper_sizes
 
@@ -87,6 +88,15 @@ class PdfBackend:
             "paper_size": job.paper_size,
             "dpi": 600,
         }
+        options = resolve_pdf_options(job, self._context.settings)
+        payload.update(
+            {
+                "pdf_scale_mode": options.scale_mode,
+                "pdf_scale_percent": options.scale_percent,
+                "pdf_auto_rotate": options.auto_rotate,
+                "pdf_center": options.center,
+            }
+        )
         max_pages = 10
         if page_count <= max_pages:
             self._run_worker(payload)

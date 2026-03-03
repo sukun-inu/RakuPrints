@@ -48,6 +48,10 @@ class PrintJob:
     page_count: int | None = None
     page_count_failed: bool = False
     page_count_revision: int = 0
+    pdf_scale_mode: str | None = None
+    pdf_scale_percent: int | None = None
+    pdf_auto_rotate: bool | None = None
+    pdf_center: bool | None = None
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
     @property
