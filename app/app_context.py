@@ -31,6 +31,12 @@ class UserSettings:
     theme_mode: str = "system"
     paper_size: str = ""
     excel_orientation_mode: str = "auto"
+    pdf_scale_mode: str = "fit"
+    pdf_scale_percent: int = 100
+    pdf_auto_rotate: bool = True
+    pdf_center: bool = True
+    pdf_warn_if_clip: bool = True
+    pdf_printer_scale: dict[str, int] = field(default_factory=dict)
     language_mode: str = "system"
     update_check_enabled: bool = True
     auto_update_enabled: bool = False
@@ -47,6 +53,12 @@ class UserSettings:
             "theme_mode": self.theme_mode,
             "paper_size": self.paper_size,
             "excel_orientation_mode": self.excel_orientation_mode,
+            "pdf_scale_mode": self.pdf_scale_mode,
+            "pdf_scale_percent": self.pdf_scale_percent,
+            "pdf_auto_rotate": self.pdf_auto_rotate,
+            "pdf_center": self.pdf_center,
+            "pdf_warn_if_clip": self.pdf_warn_if_clip,
+            "pdf_printer_scale": self.pdf_printer_scale,
             "language_mode": self.language_mode,
             "update_check_enabled": self.update_check_enabled,
             "auto_update_enabled": self.auto_update_enabled,
@@ -84,6 +96,25 @@ class UserSettings:
                     continue
                 if width > 0:
                     widths.append(width)
+        scale_raw = data.get("pdf_scale_percent", 100)
+        try:
+            scale_percent = int(scale_raw)
+        except (TypeError, ValueError):
+            scale_percent = 100
+        if scale_percent <= 0:
+            scale_percent = 100
+        printer_scale_raw = data.get("pdf_printer_scale", {})
+        printer_scale: dict[str, int] = {}
+        if isinstance(printer_scale_raw, dict):
+            for key, value in printer_scale_raw.items():
+                if not isinstance(key, str):
+                    continue
+                try:
+                    pct = int(value)
+                except (TypeError, ValueError):
+                    continue
+                if 10 <= pct <= 200:
+                    printer_scale[key] = pct
         try:
             copies = int(data.get("copies", 1))
         except (TypeError, ValueError):
@@ -98,6 +129,12 @@ class UserSettings:
             theme_mode=str(data.get("theme_mode", "system")),
             paper_size=str(data.get("paper_size", "")),
             excel_orientation_mode=str(data.get("excel_orientation_mode", "auto")),
+            pdf_scale_mode=str(data.get("pdf_scale_mode", "fit")),
+            pdf_scale_percent=scale_percent,
+            pdf_auto_rotate=bool(data.get("pdf_auto_rotate", True)),
+            pdf_center=bool(data.get("pdf_center", True)),
+            pdf_warn_if_clip=bool(data.get("pdf_warn_if_clip", True)),
+            pdf_printer_scale=printer_scale,
             language_mode=language_mode,
             update_check_enabled=bool(data.get("update_check_enabled", True)),
             auto_update_enabled=bool(data.get("auto_update_enabled", False)),

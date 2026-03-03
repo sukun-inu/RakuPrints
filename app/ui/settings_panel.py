@@ -23,6 +23,13 @@ class SettingsPanel(QtWidgets.QWidget):
     language_changed = QtCore.Signal(str)
     update_check_changed = QtCore.Signal(bool)
     auto_update_changed = QtCore.Signal(bool)
+    pdf_auto_rotate_changed = QtCore.Signal(bool)
+    pdf_center_changed = QtCore.Signal(bool)
+    pdf_scale_mode_changed = QtCore.Signal(str)
+    pdf_scale_percent_changed = QtCore.Signal(int)
+    pdf_scale_reset_requested = QtCore.Signal()
+    pdf_warn_clip_changed = QtCore.Signal(bool)
+    pdf_test_page_requested = QtCore.Signal()
 
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
@@ -92,10 +99,41 @@ class SettingsPanel(QtWidgets.QWidget):
         excel_layout.addWidget(self.excel_orientation_combo)
         excel_layout.addStretch(1)
 
+        self.pdf_group = QtWidgets.QGroupBox()
+        pdf_layout = QtWidgets.QVBoxLayout(self.pdf_group)
+        self.pdf_scale_mode_label = QtWidgets.QLabel()
+        self.pdf_scale_mode_combo = QtWidgets.QComboBox()
+        pdf_scale_mode_layout = QtWidgets.QHBoxLayout()
+        pdf_scale_mode_layout.addWidget(self.pdf_scale_mode_label)
+        pdf_scale_mode_layout.addWidget(self.pdf_scale_mode_combo)
+        pdf_scale_mode_layout.addStretch(1)
+        self.pdf_scale_label = QtWidgets.QLabel()
+        self.pdf_scale_spin = QtWidgets.QSpinBox()
+        self.pdf_scale_spin.setMinimum(10)
+        self.pdf_scale_spin.setMaximum(200)
+        self.pdf_scale_spin.setSuffix("%")
+        self.pdf_scale_reset_button = QtWidgets.QPushButton()
+        pdf_scale_layout = QtWidgets.QHBoxLayout()
+        pdf_scale_layout.addWidget(self.pdf_scale_label)
+        pdf_scale_layout.addWidget(self.pdf_scale_spin)
+        pdf_scale_layout.addWidget(self.pdf_scale_reset_button)
+        pdf_scale_layout.addStretch(1)
+        self.pdf_auto_rotate_check = QtWidgets.QCheckBox()
+        self.pdf_center_check = QtWidgets.QCheckBox()
+        self.pdf_warn_clip_check = QtWidgets.QCheckBox()
+        self.pdf_test_button = QtWidgets.QPushButton()
+        pdf_layout.addLayout(pdf_scale_mode_layout)
+        pdf_layout.addLayout(pdf_scale_layout)
+        pdf_layout.addWidget(self.pdf_auto_rotate_check)
+        pdf_layout.addWidget(self.pdf_center_check)
+        pdf_layout.addWidget(self.pdf_warn_clip_check)
+        pdf_layout.addWidget(self.pdf_test_button)
+
         printer_layout.addLayout(copies_layout)
         printer_layout.addLayout(duplex_layout)
         printer_layout.addLayout(paper_layout)
         printer_layout.addLayout(excel_layout)
+        printer_layout.addWidget(self.pdf_group)
 
         self.rules_group = QtWidgets.QGroupBox()
         rules_layout = QtWidgets.QVBoxLayout(self.rules_group)
@@ -173,6 +211,13 @@ class SettingsPanel(QtWidgets.QWidget):
         self.duplex_combo.currentIndexChanged.connect(self._on_duplex_changed)
         self.paper_combo.currentIndexChanged.connect(self._on_paper_changed)
         self.excel_orientation_combo.currentIndexChanged.connect(self._on_excel_orientation_changed)
+        self.pdf_auto_rotate_check.toggled.connect(self.pdf_auto_rotate_changed)
+        self.pdf_center_check.toggled.connect(self.pdf_center_changed)
+        self.pdf_scale_mode_combo.currentIndexChanged.connect(self._on_pdf_scale_mode_changed)
+        self.pdf_scale_spin.valueChanged.connect(self.pdf_scale_percent_changed)
+        self.pdf_scale_reset_button.clicked.connect(self.pdf_scale_reset_requested)
+        self.pdf_warn_clip_check.toggled.connect(self.pdf_warn_clip_changed)
+        self.pdf_test_button.clicked.connect(self.pdf_test_page_requested)
         self.theme_combo.currentIndexChanged.connect(self._on_theme_changed)
         self.language_combo.currentIndexChanged.connect(self.on_language_changed)
         self.update_check_box.toggled.connect(self.update_check_changed)
@@ -190,6 +235,7 @@ class SettingsPanel(QtWidgets.QWidget):
         self.theme_group.setTitle(t("settings_display_group"))
         self.language_label.setText(t("settings_language"))
         self.update_group.setTitle(t("settings_update_group"))
+        self.pdf_group.setTitle(t("settings_pdf_group"))
 
         self.use_default_radio.setText(t("settings_use_default"))
         self.select_printer_radio.setText(t("settings_select_printer"))
@@ -200,6 +246,13 @@ class SettingsPanel(QtWidgets.QWidget):
         self.duplex_label.setText(t("settings_duplex"))
         self.paper_label.setText(t("settings_paper_size"))
         self.excel_label.setText(t("settings_excel_orientation"))
+        self.pdf_scale_mode_label.setText(t("settings_pdf_scale_mode"))
+        self.pdf_scale_label.setText(t("settings_pdf_scale"))
+        self.pdf_scale_reset_button.setText(t("settings_pdf_scale_reset"))
+        self.pdf_auto_rotate_check.setText(t("settings_pdf_auto_rotate"))
+        self.pdf_center_check.setText(t("settings_pdf_center"))
+        self.pdf_warn_clip_check.setText(t("settings_pdf_warn_clip"))
+        self.pdf_test_button.setText(t("settings_pdf_test_page"))
         self.theme_label.setText(t("settings_theme"))
         self.language_label.setText(t("settings_language"))
         self.update_check_box.setText(t("settings_update_check"))
@@ -207,6 +260,7 @@ class SettingsPanel(QtWidgets.QWidget):
 
         self._refresh_duplex_items()
         self._refresh_excel_orientation_items()
+        self._refresh_pdf_scale_mode_items()
         self._refresh_theme_items()
         self._refresh_language_items()
 
@@ -241,6 +295,18 @@ class SettingsPanel(QtWidgets.QWidget):
             index = self.excel_orientation_combo.findData(current)
             if index >= 0:
                 self.excel_orientation_combo.setCurrentIndex(index)
+
+    def _refresh_pdf_scale_mode_items(self) -> None:
+        current = self.pdf_scale_mode_combo.currentData()
+        with QtCore.QSignalBlocker(self.pdf_scale_mode_combo):
+            self.pdf_scale_mode_combo.clear()
+            self.pdf_scale_mode_combo.addItem(t("pdf_scale_fit"), "fit")
+            self.pdf_scale_mode_combo.addItem(t("pdf_scale_shrink"), "shrink")
+            self.pdf_scale_mode_combo.addItem(t("pdf_scale_none"), "none")
+        if current:
+            index = self.pdf_scale_mode_combo.findData(current)
+            if index >= 0:
+                self.pdf_scale_mode_combo.setCurrentIndex(index)
 
     def _refresh_theme_items(self) -> None:
         current = self.theme_combo.currentData()
@@ -277,6 +343,10 @@ class SettingsPanel(QtWidgets.QWidget):
         selected_printer: str,
         default_printer: str,
         excel_orientation_mode: str,
+        pdf_scale_mode: str,
+        pdf_auto_rotate: bool,
+        pdf_center: bool,
+        pdf_warn_clip: bool,
         language_mode: str,
         update_check_enabled: bool,
         auto_update_enabled: bool,
@@ -285,7 +355,9 @@ class SettingsPanel(QtWidgets.QWidget):
                 QtCore.QSignalBlocker(self.copies_spin), QtCore.QSignalBlocker(self.duplex_combo), \
                 QtCore.QSignalBlocker(self.excel_orientation_combo), QtCore.QSignalBlocker(self.theme_combo), \
                 QtCore.QSignalBlocker(self.language_combo), QtCore.QSignalBlocker(self.update_check_box), \
-                QtCore.QSignalBlocker(self.auto_update_box):
+                QtCore.QSignalBlocker(self.auto_update_box), QtCore.QSignalBlocker(self.pdf_auto_rotate_check), \
+                QtCore.QSignalBlocker(self.pdf_center_check), QtCore.QSignalBlocker(self.pdf_warn_clip_check), \
+                QtCore.QSignalBlocker(self.pdf_scale_mode_combo):
             self.use_default_radio.setChecked(use_default)
             self.select_printer_radio.setChecked(not use_default)
             self.select_printer_button.setEnabled(not use_default)
@@ -303,6 +375,14 @@ class SettingsPanel(QtWidgets.QWidget):
             excel_index = self.excel_orientation_combo.findData(excel_orientation_mode)
             if excel_index >= 0:
                 self.excel_orientation_combo.setCurrentIndex(excel_index)
+
+            scale_mode_index = self.pdf_scale_mode_combo.findData(pdf_scale_mode)
+            if scale_mode_index >= 0:
+                self.pdf_scale_mode_combo.setCurrentIndex(scale_mode_index)
+
+            self.pdf_auto_rotate_check.setChecked(pdf_auto_rotate)
+            self.pdf_center_check.setChecked(pdf_center)
+            self.pdf_warn_clip_check.setChecked(pdf_warn_clip)
 
             language_index = self.language_combo.findData(language_mode)
             if language_index >= 0:
@@ -324,6 +404,14 @@ class SettingsPanel(QtWidgets.QWidget):
                 self.paper_combo.setCurrentIndex(0)
         self.paper_combo.setEnabled(enabled)
         self.paper_combo.setToolTip(tooltip)
+
+    def set_pdf_scale(self, percent: int, enabled: bool, has_override: bool, tooltip: str = "") -> None:
+        with QtCore.QSignalBlocker(self.pdf_scale_spin):
+            self.pdf_scale_spin.setValue(percent)
+        self.pdf_scale_spin.setEnabled(enabled)
+        self.pdf_scale_spin.setToolTip(tooltip)
+        self.pdf_scale_reset_button.setEnabled(enabled and has_override)
+        self.pdf_scale_reset_button.setToolTip(tooltip)
 
     def set_printers(self, printers: list[str]) -> None:
         self._printers = list(printers)
@@ -402,6 +490,10 @@ class SettingsPanel(QtWidgets.QWidget):
         mode = str(self.excel_orientation_combo.currentData() or "auto")
         self.excel_orientation_mode_changed.emit(mode)
 
+    def _on_pdf_scale_mode_changed(self) -> None:
+        mode = str(self.pdf_scale_mode_combo.currentData() or "fit")
+        self.pdf_scale_mode_changed.emit(mode)
+
     def _on_rule_double_clicked(self, index: QtCore.QModelIndex) -> None:
         if index.column() != 1:
             return
@@ -440,5 +532,3 @@ class SettingsPanel(QtWidgets.QWidget):
                 extensions.append(item.text())
         if extensions:
             self.rule_remove_requested.emit(extensions)
-
-

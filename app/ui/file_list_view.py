@@ -288,6 +288,7 @@ class FileListView(QtWidgets.QTableView):
     excel_sheets_requested = QtCore.Signal(str)
     print_selected_requested = QtCore.Signal(list)
     printer_selected_requested = QtCore.Signal(list)
+    pdf_options_requested = QtCore.Signal(list)
     column_widths_changed = QtCore.Signal(list)
 
     def __init__(self, job_manager: JobManager, parent: QtWidgets.QWidget | None = None) -> None:
@@ -444,6 +445,7 @@ class FileListView(QtWidgets.QTableView):
         print_selected_action = menu.addAction(t("context_print_selected"))
         printer_selected_action = menu.addAction(t("context_printer_select"))
         sheet_action = menu.addAction(t("context_excel_sheets"))
+        pdf_options_action = menu.addAction(t("context_pdf_options"))
         enable_action = menu.addAction(t("context_enable"))
         disable_action = menu.addAction(t("context_disable"))
         delete_action = menu.addAction(t("context_delete"))
@@ -456,11 +458,15 @@ class FileListView(QtWidgets.QTableView):
             delete_action.setEnabled(False)
         if excel_job is None:
             sheet_action.setEnabled(False)
+        if not any(job.file_type == FileType.PDF for job in self._selected_jobs()):
+            pdf_options_action.setEnabled(False)
         action = menu.exec(self.viewport().mapToGlobal(pos))
         if action == print_selected_action:
             self.print_selected_requested.emit(selected_ids)
         elif action == printer_selected_action:
             self.printer_selected_requested.emit(selected_ids)
+        elif action == pdf_options_action:
+            self.pdf_options_requested.emit(selected_ids)
         if action == sheet_action and excel_job is not None:
             self.excel_sheets_requested.emit(excel_job.id)
         if action == enable_action:
@@ -473,6 +479,10 @@ class FileListView(QtWidgets.QTableView):
     def _selected_job_ids(self) -> list[str]:
         rows = [idx.row() for idx in self.selectionModel().selectedRows()]
         return [self._job_manager.get_job(row).id for row in rows]
+
+    def _selected_jobs(self) -> list:
+        rows = [idx.row() for idx in self.selectionModel().selectedRows()]
+        return [self._job_manager.get_job(row) for row in rows]
 
     def _selected_excel_job(self):
         rows = [idx.row() for idx in self.selectionModel().selectedRows()]
