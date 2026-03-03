@@ -29,7 +29,11 @@ def _apply_paper_size(printer: QtPrintSupport.QPrinter, name: str) -> None:
 def _centering_target_rect(printer: QtPrintSupport.QPrinter) -> QtCore.QRect:
     page_rect = printer.pageRect(QtPrintSupport.QPrinter.DevicePixel)
     paper_rect = printer.paperRect(QtPrintSupport.QPrinter.DevicePixel)
-    if page_rect.isNull() or paper_rect.isNull():
+    if page_rect.isNull():
+        if not paper_rect.isNull():
+            return paper_rect
+        return page_rect
+    if paper_rect.isNull():
         return page_rect
 
     left_margin = page_rect.x() - paper_rect.x()
@@ -130,11 +134,6 @@ def main() -> int:
         target_dpi = int(payload.get("dpi", 600))
         scale = target_dpi / 72.0
         target_rect = _centering_target_rect(printer)
-        target_size = (
-            target_rect.size().toSize()
-            if hasattr(target_rect.size(), "toSize")
-            else target_rect.size()
-        )
         for page_index in range(page_start, page_end + 1):
             if page_index > page_start:
                 printer.newPage()
@@ -148,11 +147,19 @@ def main() -> int:
                 QtGui.QImage.Format_RGB888,
             ).copy()
 
-            scaled = image.scaled(
-                target_size,
-                QtCore.Qt.KeepAspectRatio,
-                QtCore.Qt.SmoothTransformation,
-            )
+            max_width = int(target_rect.width())
+            max_height = int(target_rect.height())
+            if max_width > 0 and max_height > 0 and (
+                image.width() > max_width or image.height() > max_height
+            ):
+                scaled = image.scaled(
+                    max_width,
+                    max_height,
+                    QtCore.Qt.KeepAspectRatio,
+                    QtCore.Qt.SmoothTransformation,
+                )
+            else:
+                scaled = image
             x = target_rect.x() + (target_rect.width() - scaled.width()) // 2
             y = target_rect.y() + (target_rect.height() - scaled.height()) // 2
             painter.drawImage(QtCore.QPoint(x, y), scaled)
