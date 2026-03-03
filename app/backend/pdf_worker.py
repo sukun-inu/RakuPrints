@@ -113,7 +113,6 @@ def main() -> int:
             return 6
 
         printer = QtPrintSupport.QPrinter(QtPrintSupport.QPrinter.HighResolution)
-        printer.setFullPage(True)
         if printer_name:
             printer.setPrinterName(printer_name)
         if copies > 0:
