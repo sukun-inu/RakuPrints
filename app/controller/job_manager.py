@@ -93,6 +93,30 @@ class JobManager(QtCore.QObject):
         self._jobs.insert(to_index, job)
         self.jobs_changed.emit()
 
+    def move_jobs_up(self, job_ids: list[str]) -> None:
+        if not job_ids:
+            return
+        ids = set(job_ids)
+        moved = False
+        for index in range(1, len(self._jobs)):
+            if self._jobs[index].id in ids and self._jobs[index - 1].id not in ids:
+                self._jobs[index - 1], self._jobs[index] = self._jobs[index], self._jobs[index - 1]
+                moved = True
+        if moved:
+            self.jobs_changed.emit()
+
+    def move_jobs_down(self, job_ids: list[str]) -> None:
+        if not job_ids:
+            return
+        ids = set(job_ids)
+        moved = False
+        for index in range(len(self._jobs) - 2, -1, -1):
+            if self._jobs[index].id in ids and self._jobs[index + 1].id not in ids:
+                self._jobs[index + 1], self._jobs[index] = self._jobs[index], self._jobs[index + 1]
+                moved = True
+        if moved:
+            self.jobs_changed.emit()
+
     def set_job_enabled(self, job_id: str, enabled: bool) -> None:
         job = self.find_job_by_id(job_id)
         if not job:

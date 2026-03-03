@@ -151,6 +151,24 @@ def apply_theme(app: QtWidgets.QApplication, mode: str) -> None:
             border-radius: 6px;
             background: {colors['base']};
         }}
+        QComboBox QAbstractItemView {{
+            background: {colors['base']};
+            selection-background-color: {colors['highlight']};
+            selection-color: {colors['highlight_text']};
+            outline: 0;
+        }}
+        QComboBox QAbstractItemView::item {{
+            padding: 4px 8px;
+            color: {colors['text']};
+        }}
+        QComboBox QAbstractItemView::item:selected {{
+            background: {colors['highlight']};
+            color: {colors['highlight_text']};
+        }}
+        QComboBox QAbstractItemView::item:hover {{
+            background: {colors['menu_hover']};
+            color: {colors['text']};
+        }}
         QComboBox::drop-down {{
             subcontrol-origin: padding;
             width: 24px;

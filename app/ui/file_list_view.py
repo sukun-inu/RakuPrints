@@ -426,6 +426,12 @@ class FileListView(QtWidgets.QTableView):
         if event.matches(QtGui.QKeySequence.SelectAll):
             self.selectAll()
             return
+        if event.modifiers() & QtCore.Qt.AltModifier and event.key() == QtCore.Qt.Key_Up:
+            self._move_selected(-1)
+            return
+        if event.modifiers() & QtCore.Qt.AltModifier and event.key() == QtCore.Qt.Key_Down:
+            self._move_selected(1)
+            return
         if event.key() == QtCore.Qt.Key_Space:
             rows = [idx.row() for idx in self.selectionModel().selectedRows()]
             if rows:
@@ -446,6 +452,8 @@ class FileListView(QtWidgets.QTableView):
         printer_selected_action = menu.addAction(t("context_printer_select"))
         sheet_action = menu.addAction(t("context_excel_sheets"))
         pdf_options_action = menu.addAction(t("context_pdf_options"))
+        move_up_action = menu.addAction(t("context_move_up"))
+        move_down_action = menu.addAction(t("context_move_down"))
         enable_action = menu.addAction(t("context_enable"))
         disable_action = menu.addAction(t("context_disable"))
         delete_action = menu.addAction(t("context_delete"))
@@ -460,6 +468,13 @@ class FileListView(QtWidgets.QTableView):
             sheet_action.setEnabled(False)
         if not any(job.file_type == FileType.PDF for job in self._selected_jobs()):
             pdf_options_action.setEnabled(False)
+        if not selected_ids:
+            move_up_action.setEnabled(False)
+            move_down_action.setEnabled(False)
+        else:
+            can_move_up, can_move_down = self._can_move_selected()
+            move_up_action.setEnabled(can_move_up)
+            move_down_action.setEnabled(can_move_down)
         action = menu.exec(self.viewport().mapToGlobal(pos))
         if action == print_selected_action:
             self.print_selected_requested.emit(selected_ids)
@@ -467,6 +482,10 @@ class FileListView(QtWidgets.QTableView):
             self.printer_selected_requested.emit(selected_ids)
         elif action == pdf_options_action:
             self.pdf_options_requested.emit(selected_ids)
+        elif action == move_up_action:
+            self._move_selected(-1)
+        elif action == move_down_action:
+            self._move_selected(1)
         if action == sheet_action and excel_job is not None:
             self.excel_sheets_requested.emit(excel_job.id)
         if action == enable_action:
@@ -483,6 +502,25 @@ class FileListView(QtWidgets.QTableView):
     def _selected_jobs(self) -> list:
         rows = [idx.row() for idx in self.selectionModel().selectedRows()]
         return [self._job_manager.get_job(row) for row in rows]
+
+    def _move_selected(self, direction: int) -> None:
+        ids = self._selected_job_ids()
+        if not ids:
+            return
+        if direction < 0:
+            self._job_manager.move_jobs_up(ids)
+        else:
+            self._job_manager.move_jobs_down(ids)
+
+    def _can_move_selected(self) -> tuple[bool, bool]:
+        rows = sorted({idx.row() for idx in self.selectionModel().selectedRows()})
+        if not rows:
+            return False, False
+        selected = set(rows)
+        can_move_up = any(row > 0 and (row - 1) not in selected for row in rows)
+        max_row = self._job_manager.job_count() - 1
+        can_move_down = any(row < max_row and (row + 1) not in selected for row in rows)
+        return can_move_up, can_move_down
 
     def _selected_excel_job(self):
         rows = [idx.row() for idx in self.selectionModel().selectedRows()]
