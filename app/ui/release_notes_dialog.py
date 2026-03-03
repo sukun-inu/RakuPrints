@@ -68,8 +68,6 @@ class ReleaseNotesDialog(QtWidgets.QDialog):
         self._notes: List[ReleaseNote] = []
 
         layout = QtWidgets.QVBoxLayout(self)
-        self.tabs = QtWidgets.QTabWidget()
-        layout.addWidget(self.tabs, 1)
 
         self.release_tab = QtWidgets.QWidget()
         release_layout = QtWidgets.QVBoxLayout(self.release_tab)
@@ -104,15 +102,7 @@ class ReleaseNotesDialog(QtWidgets.QDialog):
         self.splitter.addWidget(detail_container)
         self.splitter.setStretchFactor(1, 1)
         release_layout.addWidget(self.splitter, 1)
-
-        self.usage_tab = QtWidgets.QWidget()
-        usage_layout = QtWidgets.QVBoxLayout(self.usage_tab)
-        self.usage_view = QtWidgets.QTextBrowser()
-        self.usage_view.setOpenExternalLinks(True)
-        usage_layout.addWidget(self.usage_view, 1)
-
-        self.tabs.addTab(self.release_tab, "")
-        self.tabs.addTab(self.usage_tab, "")
+        layout.addWidget(self.release_tab, 1)
 
         button_row = QtWidgets.QHBoxLayout()
         button_row.addStretch(1)
@@ -136,9 +126,6 @@ class ReleaseNotesDialog(QtWidgets.QDialog):
         self.body_view.setText("")
         self.open_browser_button.setText(t("btn_open_browser"))
         self.close_button.setText(t("btn_close"))
-        self.tabs.setTabText(0, t("release_notes_tab"))
-        self.tabs.setTabText(1, t("usage_tab"))
-        self.usage_view.setMarkdown(t("usage_body"))
 
     def _start_fetch(self) -> None:
         if self._fetcher and self._fetcher.isRunning():
