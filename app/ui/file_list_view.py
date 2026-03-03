@@ -503,6 +503,21 @@ class FileListView(QtWidgets.QTableView):
         rows = [idx.row() for idx in self.selectionModel().selectedRows()]
         return [self._job_manager.get_job(row) for row in rows]
 
+    def selected_job_ids(self) -> list[str]:
+        return self._selected_job_ids()
+
+    def selected_jobs(self) -> list:
+        return self._selected_jobs()
+
+    def move_selected(self, direction: int) -> None:
+        self._move_selected(direction)
+
+    def can_move_selected(self) -> tuple[bool, bool]:
+        return self._can_move_selected()
+
+    def confirm_and_remove_selected(self) -> None:
+        self._confirm_and_remove_selected()
+
     def _move_selected(self, direction: int) -> None:
         ids = self._selected_job_ids()
         if not ids:

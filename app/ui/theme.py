@@ -100,6 +100,12 @@ def apply_theme(app: QtWidgets.QApplication, mode: str) -> None:
             "card": "#FFFFFF",
         }
 
+    combo_selection_bg = colors["highlight"]
+    combo_selection_text = colors["highlight_text"]
+    if theme == "light":
+        combo_selection_bg = "#DDE7F5"
+        combo_selection_text = colors["text"]
+
     palette = QtGui.QPalette()
     palette.setColor(QtGui.QPalette.Window, QtGui.QColor(colors["window"]))
     palette.setColor(QtGui.QPalette.WindowText, QtGui.QColor(colors["text"]))
@@ -153,8 +159,8 @@ def apply_theme(app: QtWidgets.QApplication, mode: str) -> None:
         }}
         QComboBox QAbstractItemView {{
             background: {colors['base']};
-            selection-background-color: {colors['highlight']};
-            selection-color: {colors['highlight_text']};
+            selection-background-color: {combo_selection_bg};
+            selection-color: {combo_selection_text};
             outline: 0;
         }}
         QComboBox QAbstractItemView::item {{
@@ -162,8 +168,8 @@ def apply_theme(app: QtWidgets.QApplication, mode: str) -> None:
             color: {colors['text']};
         }}
         QComboBox QAbstractItemView::item:selected {{
-            background: {colors['highlight']};
-            color: {colors['highlight_text']};
+            background: {combo_selection_bg};
+            color: {combo_selection_text};
         }}
         QComboBox QAbstractItemView::item:hover {{
             background: {colors['menu_hover']};

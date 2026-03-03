@@ -31,6 +31,7 @@ from app.ui.theme import apply_theme
 from app.ui.excel_sheet_selector import ExcelSheetSelectorDialog
 from app.ui.excel_orientation_dialog import ExcelOrientationDialog
 from app.ui.pdf_options_dialog import PdfOptionsDialog
+from app.ui.usage_dialog import UsageDialog
 from app.controller.excel_orientation_analyzer import ExcelOrientationAnalyzer
 from app.i18n import t, set_language, resolve_language
 
@@ -65,6 +66,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._load_printers()
         self._refresh_rules()
         self._update_status()
+        self._update_selection_actions()
 
         QtCore.QTimer.singleShot(600, self._update_manager.check_on_startup)
 
@@ -78,17 +80,47 @@ class MainWindow(QtWidgets.QMainWindow):
         self.apply_rules_action = QtGui.QAction(self)
         self.apply_rules_force_action = QtGui.QAction(self)
         self.exit_action = QtGui.QAction(self)
+        self.start_print_action = QtGui.QAction(self)
+        self.retry_failed_action = QtGui.QAction(self)
+        self.print_selected_action = QtGui.QAction(self)
+        self.printer_selected_action = QtGui.QAction(self)
+        self.pdf_options_action = QtGui.QAction(self)
+        self.excel_sheets_action = QtGui.QAction(self)
+        self.move_up_action = QtGui.QAction(self)
+        self.move_down_action = QtGui.QAction(self)
+        self.delete_action = QtGui.QAction(self)
 
+        self.usage_action = QtGui.QAction(self)
         self.about_action = QtGui.QAction(self)
         self.log_summary_action = QtGui.QAction(self)
         self.check_updates_action = QtGui.QAction(self)
+
+        self.add_files_action.setShortcut(QtGui.QKeySequence.Open)
+        self.add_folder_action.setShortcut(QtGui.QKeySequence("Ctrl+Shift+O"))
+        self.start_print_action.setShortcut(QtGui.QKeySequence("Ctrl+Return"))
+        self.retry_failed_action.setShortcut(QtGui.QKeySequence("Ctrl+R"))
+        self.print_selected_action.setShortcut(QtGui.QKeySequence.Print)
+        self.printer_selected_action.setShortcut(QtGui.QKeySequence("Ctrl+Shift+P"))
+        self.pdf_options_action.setShortcut(QtGui.QKeySequence("Ctrl+Alt+P"))
+        self.excel_sheets_action.setShortcut(QtGui.QKeySequence("Ctrl+Alt+E"))
+        self.usage_action.setShortcut(QtGui.QKeySequence.HelpContents)
 
         self.add_files_action.triggered.connect(self._on_add_files)
         self.add_folder_action.triggered.connect(self._on_add_folder)
         self.apply_rules_action.triggered.connect(lambda: self._job_manager.apply_rules(force=False))
         self.apply_rules_force_action.triggered.connect(lambda: self._job_manager.apply_rules(force=True))
         self.exit_action.triggered.connect(self.close)
+        self.start_print_action.triggered.connect(self._on_start_printing)
+        self.retry_failed_action.triggered.connect(self._on_retry_failed)
+        self.print_selected_action.triggered.connect(self._on_print_selected_action)
+        self.printer_selected_action.triggered.connect(self._on_printer_selected_action)
+        self.pdf_options_action.triggered.connect(self._on_pdf_options_action)
+        self.excel_sheets_action.triggered.connect(self._on_excel_sheets_action)
+        self.move_up_action.triggered.connect(lambda: self.file_list.move_selected(-1))
+        self.move_down_action.triggered.connect(lambda: self.file_list.move_selected(1))
+        self.delete_action.triggered.connect(lambda: self.file_list.confirm_and_remove_selected())
 
+        self.usage_action.triggered.connect(self._on_usage)
         self.about_action.triggered.connect(self._on_about)
         self.log_summary_action.triggered.connect(self._on_log_summary)
         self.check_updates_action.triggered.connect(self._on_check_updates)
@@ -100,6 +132,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.file_menu.addSeparator()
         self.file_menu.addAction(self.exit_action)
 
+        self.help_menu.addAction(self.usage_action)
+        self.help_menu.addSeparator()
         self.help_menu.addAction(self.about_action)
         self.help_menu.addAction(self.log_summary_action)
         self.help_menu.addAction(self.check_updates_action)
@@ -123,6 +157,25 @@ class MainWindow(QtWidgets.QMainWindow):
 
         central = QtWidgets.QWidget()
         central_layout = QtWidgets.QVBoxLayout(central)
+        self.command_bar = QtWidgets.QToolBar()
+        self.command_bar.setMovable(False)
+        self.command_bar.setFloatable(False)
+        self.command_bar.setToolButtonStyle(QtCore.Qt.ToolButtonTextOnly)
+        self.command_bar.addAction(self.add_files_action)
+        self.command_bar.addAction(self.add_folder_action)
+        self.command_bar.addSeparator()
+        self.command_bar.addAction(self.start_print_action)
+        self.command_bar.addAction(self.print_selected_action)
+        self.command_bar.addAction(self.retry_failed_action)
+        self.command_bar.addSeparator()
+        self.command_bar.addAction(self.move_up_action)
+        self.command_bar.addAction(self.move_down_action)
+        self.command_bar.addAction(self.delete_action)
+        self.command_bar.addSeparator()
+        self.command_bar.addAction(self.printer_selected_action)
+        self.command_bar.addAction(self.pdf_options_action)
+        self.command_bar.addAction(self.excel_sheets_action)
+        central_layout.addWidget(self.command_bar)
         central_layout.addWidget(splitter)
 
         bottom_layout = QtWidgets.QHBoxLayout()
@@ -144,6 +197,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.file_list.printer_selected_requested.connect(self._on_printer_selected)
         self.file_list.pdf_options_requested.connect(self._on_pdf_options_requested)
         self.file_list.column_widths_changed.connect(self._on_column_widths_changed)
+        self.file_list.selectionModel().selectionChanged.connect(lambda *_: self._update_selection_actions())
 
         self.settings_panel.use_default_changed.connect(self._on_use_default_changed)
         self.settings_panel.select_printer_clicked.connect(self._on_global_printer_select)
@@ -172,6 +226,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self._job_manager.jobs_changed.connect(self._update_status)
         self._job_manager.job_updated.connect(self._update_status)
+        self._job_manager.jobs_changed.connect(self._update_selection_actions)
 
         self._context.rules_changed.connect(self._refresh_rules)
         self._context.settings_changed.connect(self._refresh_settings)
@@ -187,6 +242,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self.apply_rules_force_action.setText(t("action_apply_rules_force"))
         self.exit_action.setText(t("action_exit"))
 
+        self.start_print_action.setText(t("button_start_printing"))
+        self.retry_failed_action.setText(t("button_retry_failed"))
+        self.print_selected_action.setText(t("action_print_selected"))
+        self.printer_selected_action.setText(t("action_set_printer"))
+        self.pdf_options_action.setText(t("action_pdf_options"))
+        self.excel_sheets_action.setText(t("action_excel_sheets"))
+        self.move_up_action.setText(t("action_move_up"))
+        self.move_down_action.setText(t("action_move_down"))
+        self.delete_action.setText(t("action_delete_selected"))
+
+        self.usage_action.setText(t("action_usage"))
         self.about_action.setText(t("action_about"))
         self.log_summary_action.setText(t("action_log_summary"))
         self.check_updates_action.setText(t("action_check_updates"))
@@ -235,6 +301,29 @@ class MainWindow(QtWidgets.QMainWindow):
         completed = sum(1 for job in self._job_manager.jobs() if job.status == JobStatus.SUCCESS)
         self.statusBar().showMessage(t("status_jobs_fmt", total=total, completed=completed, failed=failed))
         self.retry_button.setEnabled(failed > 0 and not (self._executor and self._executor.isRunning()))
+        self.retry_failed_action.setEnabled(failed > 0 and not (self._executor and self._executor.isRunning()))
+
+    def _update_selection_actions(self) -> None:
+        if not self.file_list.isEnabled():
+            self.print_selected_action.setEnabled(False)
+            self.printer_selected_action.setEnabled(False)
+            self.pdf_options_action.setEnabled(False)
+            self.excel_sheets_action.setEnabled(False)
+            self.move_up_action.setEnabled(False)
+            self.move_down_action.setEnabled(False)
+            self.delete_action.setEnabled(False)
+            return
+
+        jobs = self.file_list.selected_jobs()
+        has_selection = bool(jobs)
+        self.print_selected_action.setEnabled(has_selection)
+        self.printer_selected_action.setEnabled(has_selection)
+        self.delete_action.setEnabled(has_selection)
+        self.pdf_options_action.setEnabled(any(job.file_type == FileType.PDF for job in jobs))
+        self.excel_sheets_action.setEnabled(len(jobs) == 1 and jobs[0].file_type == FileType.EXCEL)
+        can_move_up, can_move_down = self.file_list.can_move_selected()
+        self.move_up_action.setEnabled(can_move_up)
+        self.move_down_action.setEnabled(can_move_down)
 
     def _on_add_files(self) -> None:
         filter_text = "印刷できるファイル (*.pdf *.doc *.docx *.xls *.xlsx *.xlsm *.ppt *.pptx)"
@@ -253,6 +342,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _on_check_updates(self) -> None:
         self._update_manager.check_for_updates(manual=True)
+
+    def _on_usage(self) -> None:
+        dialog = UsageDialog(self)
+        dialog.exec()
 
     def _on_job_printer_select(self, job_id: str) -> None:
         job = self._job_manager.find_job_by_id(job_id)
@@ -536,6 +629,27 @@ class MainWindow(QtWidgets.QMainWindow):
         if ok and selected:
             self._job_manager.set_jobs_printer(job_ids, selected)
 
+    def _on_print_selected_action(self) -> None:
+        self._on_print_selected(self.file_list.selected_job_ids())
+
+    def _on_printer_selected_action(self) -> None:
+        job_ids = self.file_list.selected_job_ids()
+        if not job_ids:
+            return
+        self._on_printer_selected(job_ids)
+
+    def _on_pdf_options_action(self) -> None:
+        job_ids = self.file_list.selected_job_ids()
+        if not job_ids:
+            return
+        self._on_pdf_options_requested(job_ids)
+
+    def _on_excel_sheets_action(self) -> None:
+        jobs = self.file_list.selected_jobs()
+        if len(jobs) != 1 or jobs[0].file_type != FileType.EXCEL:
+            return
+        self._on_excel_sheets_select(jobs[0].id)
+
     def _on_retry_failed(self) -> None:
         if self._executor and self._executor.isRunning():
             return
@@ -641,7 +755,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.settings_panel.setEnabled(not locked)
         self.start_button.setEnabled(not locked)
         self.retry_button.setEnabled(not locked)
+        self.command_bar.setEnabled(not locked)
         self.menuBar().setEnabled(not locked)
+        self._update_selection_actions()
 
     def _get_default_printer_name(self) -> str:
         try:
