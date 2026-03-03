@@ -16,6 +16,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from app.app_context import AppContext
 from app.i18n import t
 from app.version import __version__
+from app.ui.update_prompt_dialog import UpdatePromptDialog
 
 REPO_SLUG = "sukun-inu/RakuPrints"
 GITHUB_API = "https://api.github.com/repos/{slug}/releases/latest"
@@ -207,21 +208,11 @@ class UpdateManager(QtCore.QObject):
         self._prompt_update(info)
 
     def _prompt_update(self, info: UpdateInfo) -> None:
-        dialog = QtWidgets.QMessageBox(self._parent)
-        dialog.setWindowTitle(t("title_update"))
-        dialog.setIcon(QtWidgets.QMessageBox.Information)
-        dialog.setText(t("msg_update_available_fmt", version=info.version))
-        snooze_checkbox = QtWidgets.QCheckBox(t("update_ignore_7days"), dialog)
-        dialog.setCheckBox(snooze_checkbox)
-        update_now = dialog.addButton(t("btn_update_now"), QtWidgets.QMessageBox.AcceptRole)
-        update_no = dialog.addButton(t("btn_update_no"), QtWidgets.QMessageBox.RejectRole)
-        dialog.exec()
-
-        clicked = dialog.clickedButton()
-        if clicked == update_now:
+        result = UpdatePromptDialog.get_result(info, self._parent)
+        if result.update_now:
             self._download_update(info)
             return
-        if snooze_checkbox.isChecked():
+        if result.snooze:
             self._context.update_setting(update_snooze_until=_iso_plus_days(7))
 
     def _download_update(self, info: UpdateInfo) -> None:
