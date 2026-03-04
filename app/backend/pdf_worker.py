@@ -151,10 +151,11 @@ def main() -> int:
         if pdf_scale_mode not in ("auto", "fit", "shrink", "none"):
             pdf_scale_mode = "auto"
         use_paper_rect = bool(payload.get("pdf_use_paper_rect", False))
-        target_rect = _target_rect(printer, use_paper_rect)
-        safe_rect = target_rect
-        if safe_rect.width() > 2 and safe_rect.height() > 2:
-            safe_rect = safe_rect.adjusted(1, 1, -1, -1)
+        scale_rect = _target_rect(printer, use_paper_rect)
+        paper_rect = _target_rect(printer, True)
+        safe_scale_rect = scale_rect
+        if safe_scale_rect.width() > 2 and safe_scale_rect.height() > 2:
+            safe_scale_rect = safe_scale_rect.adjusted(1, 1, -1, -1)
         for page_index in range(page_start, page_end + 1):
             if page_index > page_start:
                 printer.newPage()
@@ -176,8 +177,22 @@ def main() -> int:
                 pix.stride,
                 QtGui.QImage.Format_RGB888,
             ).copy()
-            max_width = int(max(1, safe_rect.width()))
-            max_height = int(max(1, safe_rect.height()))
+            max_width = int(max(1, safe_scale_rect.width()))
+            max_height = int(max(1, safe_scale_rect.height()))
+            if pdf_center and paper_rect != scale_rect:
+                center = paper_rect.center()
+                left_space = center.x() - safe_scale_rect.left()
+                right_space = safe_scale_rect.right() - center.x()
+                top_space = center.y() - safe_scale_rect.top()
+                bottom_space = safe_scale_rect.bottom() - center.y()
+                if left_space > 0 and right_space > 0:
+                    max_width = min(max_width, int(2 * min(left_space, right_space)))
+                if top_space > 0 and bottom_space > 0:
+                    max_height = min(max_height, int(2 * min(top_space, bottom_space)))
+                if max_width <= 0:
+                    max_width = int(max(1, safe_scale_rect.width()))
+                if max_height <= 0:
+                    max_height = int(max(1, safe_scale_rect.height()))
             base_factor = _scale_factor(pdf_scale_mode, image.width(), image.height(), max_width, max_height)
             final_factor = base_factor * scale_percent
             if pdf_scale_mode == "auto":
@@ -193,11 +208,16 @@ def main() -> int:
                 QtCore.Qt.SmoothTransformation,
             )
             if pdf_center:
-                x = safe_rect.x() + (safe_rect.width() - scaled.width()) // 2
-                y = safe_rect.y() + (safe_rect.height() - scaled.height()) // 2
+                if paper_rect != scale_rect:
+                    center = paper_rect.center()
+                    x = center.x() - (scaled.width() // 2)
+                    y = center.y() - (scaled.height() // 2)
+                else:
+                    x = safe_scale_rect.x() + (safe_scale_rect.width() - scaled.width()) // 2
+                    y = safe_scale_rect.y() + (safe_scale_rect.height() - scaled.height()) // 2
             else:
-                x = safe_rect.x()
-                y = safe_rect.y()
+                x = safe_scale_rect.x()
+                y = safe_scale_rect.y()
             painter.drawImage(QtCore.QPoint(x, y), scaled)
     except Exception as exc:
         print(str(exc) or "PDF print failed", file=sys.stderr)
