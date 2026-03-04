@@ -26,18 +26,6 @@ def _apply_paper_size(printer: QtPrintSupport.QPrinter, name: str) -> None:
             break
 
 
-def _target_rect(printer: QtPrintSupport.QPrinter, use_paper_rect: bool) -> QtCore.QRect:
-    if use_paper_rect:
-        rect = printer.paperRect(QtPrintSupport.QPrinter.DevicePixel)
-        if rect.isNull():
-            rect = printer.pageRect(QtPrintSupport.QPrinter.DevicePixel)
-    else:
-        rect = printer.pageRect(QtPrintSupport.QPrinter.DevicePixel)
-        if rect.isNull():
-            rect = printer.paperRect(QtPrintSupport.QPrinter.DevicePixel)
-    return rect
-
-
 def _scale_factor(mode: str, source_w: int, source_h: int, target_w: int, target_h: int) -> float:
     if source_w <= 0 or source_h <= 0 or target_w <= 0 or target_h <= 0:
         return 1.0
@@ -126,6 +114,19 @@ def main() -> int:
         if paper_size:
             _apply_paper_size(printer, paper_size)
 
+        # Capture printable area in non-full-page mode (driver margins reflected).
+        printer.setFullPage(False)
+        printable_rect = printer.pageLayout().paintRectPixels(printer.resolution())
+        if printable_rect.isNull():
+            printable_rect = printer.pageRect(QtPrintSupport.QPrinter.DevicePixel)
+        paper_rect = printer.paperRect(QtPrintSupport.QPrinter.DevicePixel)
+        if printable_rect.isNull():
+            printable_rect = paper_rect
+        if paper_rect.isNull():
+            paper_rect = printable_rect
+
+        # Draw in full-page coordinates to avoid origin differences across drivers.
+        printer.setFullPage(True)
         if not painter.begin(printer):
             print("Failed to initialize printer", file=sys.stderr)
             return 5
@@ -151,8 +152,10 @@ def main() -> int:
         if pdf_scale_mode not in ("auto", "fit", "shrink", "none"):
             pdf_scale_mode = "auto"
         use_paper_rect = bool(payload.get("pdf_use_paper_rect", False))
-        scale_rect = _target_rect(printer, use_paper_rect)
-        paper_rect = _target_rect(printer, True)
+        paper_rect = printer.paperRect(QtPrintSupport.QPrinter.DevicePixel)
+        if paper_rect.isNull():
+            paper_rect = printable_rect
+        scale_rect = paper_rect if use_paper_rect else printable_rect
         safe_scale_rect = scale_rect
         if safe_scale_rect.width() > 2 and safe_scale_rect.height() > 2:
             safe_scale_rect = safe_scale_rect.adjusted(1, 1, -1, -1)
