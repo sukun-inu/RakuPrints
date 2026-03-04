@@ -50,6 +50,12 @@ def _assert_pdf_paper_matches(doc, paper_size: str) -> None:
             )
 
 
+def _is_pdf_printer_name(printer_name: str) -> bool:
+    if not printer_name:
+        return False
+    return "pdf" in printer_name.lower()
+
+
 class PdfBackend:
     def __init__(self, context: AppContext) -> None:
         self._context = context
@@ -82,11 +88,10 @@ class PdfBackend:
 
         payload = {
             "file_path": job.file_path,
-            "printer_name": job.printer_name,
+            "printer_name": printer_name,
             "copies": job.copies,
             "duplex": job.duplex.value,
             "paper_size": job.paper_size,
-            "dpi": 600,
         }
         options = resolve_pdf_options(job, self._context.settings)
         payload.update(
@@ -95,6 +100,7 @@ class PdfBackend:
                 "pdf_scale_percent": options.scale_percent,
                 "pdf_auto_rotate": options.auto_rotate,
                 "pdf_center": options.center,
+                "pdf_use_paper_rect": _is_pdf_printer_name(printer_name),
             }
         )
         max_pages = 10

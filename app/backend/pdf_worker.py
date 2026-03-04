@@ -26,17 +26,15 @@ def _apply_paper_size(printer: QtPrintSupport.QPrinter, name: str) -> None:
             break
 
 
-def _centering_target_rect(printer: QtPrintSupport.QPrinter) -> QtCore.QRect:
-    rect = printer.pageRect(QtPrintSupport.QPrinter.DevicePixel)
-    if rect.isNull():
+def _target_rect(printer: QtPrintSupport.QPrinter, use_paper_rect: bool) -> QtCore.QRect:
+    if use_paper_rect:
         rect = printer.paperRect(QtPrintSupport.QPrinter.DevicePixel)
-    return rect
-
-
-def _printable_rect(printer: QtPrintSupport.QPrinter) -> QtCore.QRect:
-    rect = printer.pageRect(QtPrintSupport.QPrinter.DevicePixel)
-    if rect.isNull():
-        rect = printer.paperRect(QtPrintSupport.QPrinter.DevicePixel)
+        if rect.isNull():
+            rect = printer.pageRect(QtPrintSupport.QPrinter.DevicePixel)
+    else:
+        rect = printer.pageRect(QtPrintSupport.QPrinter.DevicePixel)
+        if rect.isNull():
+            rect = printer.paperRect(QtPrintSupport.QPrinter.DevicePixel)
     return rect
 
 
@@ -132,7 +130,18 @@ def main() -> int:
             print("Failed to initialize printer", file=sys.stderr)
             return 5
 
-        target_dpi = int(payload.get("dpi", 600))
+        dpi_raw = payload.get("dpi", None)
+        try:
+            target_dpi = int(dpi_raw) if dpi_raw is not None else 0
+        except (TypeError, ValueError):
+            target_dpi = 0
+        if target_dpi <= 0:
+            try:
+                target_dpi = int(getattr(printer, "resolution")() or 0)
+            except Exception:
+                target_dpi = 0
+        if target_dpi <= 0:
+            target_dpi = 600
         scale = target_dpi / 72.0
         if pdf_scale_percent < 10:
             pdf_scale_percent = 10
@@ -141,7 +150,8 @@ def main() -> int:
         scale_percent = pdf_scale_percent / 100.0
         if pdf_scale_mode not in ("auto", "fit", "shrink", "none"):
             pdf_scale_mode = "auto"
-        target_rect = _centering_target_rect(printer) if pdf_center else _printable_rect(printer)
+        use_paper_rect = bool(payload.get("pdf_use_paper_rect", False))
+        target_rect = _target_rect(printer, use_paper_rect)
         safe_rect = target_rect
         if safe_rect.width() > 2 and safe_rect.height() > 2:
             safe_rect = safe_rect.adjusted(1, 1, -1, -1)
