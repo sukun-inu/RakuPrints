@@ -14,7 +14,11 @@ class PdfPrintOptions:
     center: bool
 
 
-def resolve_pdf_options(job: PrintJob, settings: UserSettings) -> PdfPrintOptions:
+def resolve_pdf_options(
+    job: PrintJob,
+    settings: UserSettings,
+    effective_printer_name: str | None = None,
+) -> PdfPrintOptions:
     scale_mode = job.pdf_scale_mode or settings.pdf_scale_mode or "auto"
     auto_rotate = settings.pdf_auto_rotate if job.pdf_auto_rotate is None else bool(job.pdf_auto_rotate)
     center = settings.pdf_center if job.pdf_center is None else bool(job.pdf_center)
@@ -22,7 +26,7 @@ def resolve_pdf_options(job: PrintJob, settings: UserSettings) -> PdfPrintOption
     if job.pdf_scale_percent is not None:
         scale_percent = int(job.pdf_scale_percent)
     else:
-        printer_name = job.printer_name or ""
+        printer_name = effective_printer_name if effective_printer_name is not None else (job.printer_name or "")
         scale_percent = int(settings.pdf_printer_scale.get(printer_name, settings.pdf_scale_percent))
 
     if scale_percent < 10:
