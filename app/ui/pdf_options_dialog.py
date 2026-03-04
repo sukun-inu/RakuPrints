@@ -34,6 +34,7 @@ class PdfOptionsDialog(QtWidgets.QDialog):
         self.scale_mode_combo = QtWidgets.QComboBox()
         self.scale_mode_combo.addItem(t("pdf_options_keep"), "keep")
         self.scale_mode_combo.addItem(t("pdf_options_default"), "default")
+        self.scale_mode_combo.addItem(t("pdf_scale_auto"), "auto")
         self.scale_mode_combo.addItem(t("pdf_scale_fit"), "fit")
         self.scale_mode_combo.addItem(t("pdf_scale_shrink"), "shrink")
         self.scale_mode_combo.addItem(t("pdf_scale_none"), "none")

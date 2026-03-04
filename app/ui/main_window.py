@@ -178,15 +178,6 @@ class MainWindow(QtWidgets.QMainWindow):
         central_layout.addWidget(self.command_bar)
         central_layout.addWidget(splitter)
 
-        bottom_layout = QtWidgets.QHBoxLayout()
-        self.start_button = QtWidgets.QPushButton()
-        self.retry_button = QtWidgets.QPushButton()
-        self.retry_button.setEnabled(False)
-        bottom_layout.addWidget(self.start_button)
-        bottom_layout.addWidget(self.retry_button)
-        bottom_layout.addStretch(1)
-        central_layout.addLayout(bottom_layout)
-
         self.setCentralWidget(central)
 
     def _bind_signals(self) -> None:
@@ -221,9 +212,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.settings_panel.update_check_changed.connect(self._on_update_check_changed)
         self.settings_panel.auto_update_changed.connect(self._on_auto_update_changed)
 
-        self.start_button.clicked.connect(self._on_start_printing)
-        self.retry_button.clicked.connect(self._on_retry_failed)
-
         self._job_manager.jobs_changed.connect(self._update_status)
         self._job_manager.job_updated.connect(self._update_status)
         self._job_manager.jobs_changed.connect(self._update_selection_actions)
@@ -256,9 +244,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.about_action.setText(t("action_about"))
         self.log_summary_action.setText(t("action_log_summary"))
         self.check_updates_action.setText(t("action_check_updates"))
-
-        self.start_button.setText(t("button_start_printing"))
-        self.retry_button.setText(t("button_retry_failed"))
 
         self.settings_panel.retranslate()
         self.file_list.retranslate()
@@ -300,7 +285,6 @@ class MainWindow(QtWidgets.QMainWindow):
         failed = sum(1 for job in self._job_manager.jobs() if job.status == JobStatus.FAILED)
         completed = sum(1 for job in self._job_manager.jobs() if job.status == JobStatus.SUCCESS)
         self.statusBar().showMessage(t("status_jobs_fmt", total=total, completed=completed, failed=failed))
-        self.retry_button.setEnabled(failed > 0 and not (self._executor and self._executor.isRunning()))
         self.retry_failed_action.setEnabled(failed > 0 and not (self._executor and self._executor.isRunning()))
 
     def _update_selection_actions(self) -> None:
@@ -490,7 +474,7 @@ class MainWindow(QtWidgets.QMainWindow):
             if options.scale_mode == "default":
                 job.pdf_scale_mode = None
                 changed = True
-            elif options.scale_mode in ("fit", "shrink", "none"):
+            elif options.scale_mode in ("auto", "fit", "shrink", "none"):
                 job.pdf_scale_mode = options.scale_mode
                 changed = True
 
@@ -753,8 +737,6 @@ class MainWindow(QtWidgets.QMainWindow):
     def _lock_ui(self, locked: bool) -> None:
         self.file_list.setEnabled(not locked)
         self.settings_panel.setEnabled(not locked)
-        self.start_button.setEnabled(not locked)
-        self.retry_button.setEnabled(not locked)
         self.command_bar.setEnabled(not locked)
         self.menuBar().setEnabled(not locked)
         self._update_selection_actions()

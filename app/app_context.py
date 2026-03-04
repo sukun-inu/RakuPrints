@@ -31,7 +31,7 @@ class UserSettings:
     theme_mode: str = "system"
     paper_size: str = ""
     excel_orientation_mode: str = "auto"
-    pdf_scale_mode: str = "fit"
+    pdf_scale_mode: str = "auto"
     pdf_scale_percent: int = 100
     pdf_auto_rotate: bool = True
     pdf_center: bool = True
@@ -129,7 +129,7 @@ class UserSettings:
             theme_mode=str(data.get("theme_mode", "system")),
             paper_size=str(data.get("paper_size", "")),
             excel_orientation_mode=str(data.get("excel_orientation_mode", "auto")),
-            pdf_scale_mode=str(data.get("pdf_scale_mode", "fit")),
+            pdf_scale_mode=str(data.get("pdf_scale_mode", "auto")),
             pdf_scale_percent=scale_percent,
             pdf_auto_rotate=bool(data.get("pdf_auto_rotate", True)),
             pdf_center=bool(data.get("pdf_center", True)),

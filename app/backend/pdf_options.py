@@ -15,7 +15,7 @@ class PdfPrintOptions:
 
 
 def resolve_pdf_options(job: PrintJob, settings: UserSettings) -> PdfPrintOptions:
-    scale_mode = job.pdf_scale_mode or settings.pdf_scale_mode or "fit"
+    scale_mode = job.pdf_scale_mode or settings.pdf_scale_mode or "auto"
     auto_rotate = settings.pdf_auto_rotate if job.pdf_auto_rotate is None else bool(job.pdf_auto_rotate)
     center = settings.pdf_center if job.pdf_center is None else bool(job.pdf_center)
 
@@ -30,8 +30,8 @@ def resolve_pdf_options(job: PrintJob, settings: UserSettings) -> PdfPrintOption
     if scale_percent > 200:
         scale_percent = 200
 
-    if scale_mode not in ("fit", "shrink", "none"):
-        scale_mode = "fit"
+    if scale_mode not in ("auto", "fit", "shrink", "none"):
+        scale_mode = "auto"
 
     return PdfPrintOptions(
         scale_mode=scale_mode,

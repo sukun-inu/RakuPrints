@@ -187,8 +187,21 @@ def apply_theme(app: QtWidgets.QApplication, mode: str) -> None:
             background: {colors['button']};
         }}
         QPushButton:hover {{ border-color: {colors['highlight']}; }}
+        QToolBar {{
+            spacing: 6px;
+            background: transparent;
+            border: none;
+        }}
+        QToolButton {{
+            padding: 6px 12px;
+            border: 1px solid {colors['grid']};
+            border-radius: 6px;
+            background: {colors['button']};
+        }}
+        QToolButton:hover {{ border-color: {colors['highlight']}; }}
         *:disabled {{ color: {colors['disabled_text']}; }}
         QPushButton:disabled {{ background: {colors['disabled_bg']}; }}
+        QToolButton:disabled {{ background: {colors['disabled_bg']}; }}
         QMenuBar {{ background: {colors['window']}; }}
         QMenuBar::item:selected {{ background: {colors['menu_hover']}; }}
         QStatusBar {{ color: {colors['text']}; background: {colors['window']}; }}
