@@ -93,7 +93,7 @@ class PdfBackend:
             "duplex": job.duplex.value,
             "paper_size": job.paper_size,
         }
-        options = resolve_pdf_options(job, self._context.settings)
+        options = resolve_pdf_options(job, self._context.settings, effective_printer_name=printer_name)
         payload.update(
             {
                 "pdf_scale_mode": options.scale_mode,

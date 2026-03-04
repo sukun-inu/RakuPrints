@@ -672,10 +672,15 @@ class MainWindow(QtWidgets.QMainWindow):
             return True
         warned = False
         for job in pdf_jobs:
-            options = resolve_pdf_options(job, settings)
+            effective_printer_name = job.printer_name or self._get_default_printer_name()
+            options = resolve_pdf_options(
+                job,
+                settings,
+                effective_printer_name=effective_printer_name,
+            )
             if options.scale_mode != "none":
                 continue
-            if self._printer_has_margins(job.printer_name, job.paper_size):
+            if self._printer_has_margins(effective_printer_name, job.paper_size):
                 warned = True
                 break
         if not warned:
@@ -689,6 +694,8 @@ class MainWindow(QtWidgets.QMainWindow):
         return result == QtWidgets.QMessageBox.Yes
 
     def _printer_has_margins(self, printer_name: str, paper_size: str) -> bool:
+        if not printer_name:
+            printer_name = self._get_default_printer_name()
         if not printer_name:
             return False
         printer = QtPrintSupport.QPrinter(QtPrintSupport.QPrinter.HighResolution)

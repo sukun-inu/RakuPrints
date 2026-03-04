@@ -164,7 +164,7 @@ def main() -> int:
             if pdf_auto_rotate:
                 page_rect = page.rect
                 page_landscape = page_rect.width > page_rect.height
-                target_landscape = safe_rect.width() > safe_rect.height()
+                target_landscape = safe_scale_rect.width() > safe_scale_rect.height()
                 rotate = page_landscape != target_landscape
             matrix = fitz.Matrix(scale, scale)
             if rotate:
