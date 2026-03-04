@@ -3,7 +3,7 @@
 
 #define MyAppName "らーく印刷"
 #define MyAppNameEn "RakuPrint"
-#define MyAppVersion "0.2.7"
+#define MyAppVersion "0.2.8"
 #define MyAppPublisher "Hibiki Suzuki"
 #define MyAppURL "https://github.com/sukun-inu/RakuPrints"
 #define MyAppExeName "RakuPrint.exe"
