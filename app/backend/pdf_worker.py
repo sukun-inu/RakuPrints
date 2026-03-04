@@ -27,33 +27,10 @@ def _apply_paper_size(printer: QtPrintSupport.QPrinter, name: str) -> None:
 
 
 def _centering_target_rect(printer: QtPrintSupport.QPrinter) -> QtCore.QRect:
-    page_rect = printer.pageRect(QtPrintSupport.QPrinter.DevicePixel)
-    paper_rect = printer.paperRect(QtPrintSupport.QPrinter.DevicePixel)
-    if page_rect.isNull():
-        if not paper_rect.isNull():
-            return paper_rect
-        return page_rect
-    if paper_rect.isNull():
-        return page_rect
-
-    left_margin = page_rect.x() - paper_rect.x()
-    top_margin = page_rect.y() - paper_rect.y()
-    right_margin = (paper_rect.x() + paper_rect.width()) - (page_rect.x() + page_rect.width())
-    bottom_margin = (paper_rect.y() + paper_rect.height()) - (page_rect.y() + page_rect.height())
-
-    left_margin = max(0, left_margin)
-    right_margin = max(0, right_margin)
-    top_margin = max(0, top_margin)
-    bottom_margin = max(0, bottom_margin)
-
-    safe_width = paper_rect.width() - 2 * max(left_margin, right_margin)
-    safe_height = paper_rect.height() - 2 * max(top_margin, bottom_margin)
-    if safe_width <= 0 or safe_height <= 0:
-        return page_rect
-
-    x = paper_rect.x() + (paper_rect.width() - safe_width) // 2
-    y = paper_rect.y() + (paper_rect.height() - safe_height) // 2
-    return QtCore.QRect(x, y, safe_width, safe_height)
+    rect = printer.pageRect(QtPrintSupport.QPrinter.DevicePixel)
+    if rect.isNull():
+        rect = printer.paperRect(QtPrintSupport.QPrinter.DevicePixel)
+    return rect
 
 
 def _printable_rect(printer: QtPrintSupport.QPrinter) -> QtCore.QRect:
@@ -69,7 +46,7 @@ def _scale_factor(mode: str, source_w: int, source_h: int, target_w: int, target
     fit = min(target_w / source_w, target_h / source_h)
     if mode == "fit":
         return fit
-    if mode == "shrink":
+    if mode in ("shrink", "auto"):
         return min(1.0, fit)
     return 1.0
 
@@ -162,8 +139,8 @@ def main() -> int:
         if pdf_scale_percent > 200:
             pdf_scale_percent = 200
         scale_percent = pdf_scale_percent / 100.0
-        if pdf_scale_mode not in ("fit", "shrink", "none"):
-            pdf_scale_mode = "fit"
+        if pdf_scale_mode not in ("auto", "fit", "shrink", "none"):
+            pdf_scale_mode = "auto"
         target_rect = _centering_target_rect(printer) if pdf_center else _printable_rect(printer)
         safe_rect = target_rect
         if safe_rect.width() > 2 and safe_rect.height() > 2:
@@ -193,6 +170,10 @@ def main() -> int:
             max_height = int(max(1, safe_rect.height()))
             base_factor = _scale_factor(pdf_scale_mode, image.width(), image.height(), max_width, max_height)
             final_factor = base_factor * scale_percent
+            if pdf_scale_mode == "auto":
+                max_factor = _scale_factor("fit", image.width(), image.height(), max_width, max_height)
+                if final_factor > max_factor:
+                    final_factor = max_factor
             scaled_w = max(1, int(image.width() * final_factor))
             scaled_h = max(1, int(image.height() * final_factor))
             scaled = image.scaled(

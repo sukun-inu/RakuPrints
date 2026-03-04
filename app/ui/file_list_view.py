@@ -306,7 +306,7 @@ class FileListView(QtWidgets.QTableView):
         self.setDragDropMode(QtWidgets.QAbstractItemView.DragDrop)
         self.setDefaultDropAction(QtCore.Qt.MoveAction)
         self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
-        self.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+        self.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
         self.setAlternatingRowColors(True)
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.setEditTriggers(
@@ -415,10 +415,13 @@ class FileListView(QtWidgets.QTableView):
                     rows = [index.row()]
                 job_ids = [self._job_manager.get_job(row).id for row in rows]
                 self._job_manager.set_jobs_enabled(job_ids, new_state == QtCore.Qt.Checked)
-                self.selectionModel().select(
-                    index,
-                    QtCore.QItemSelectionModel.ClearAndSelect | QtCore.QItemSelectionModel.Rows,
-                )
+                if index.row() in rows and len(rows) > 1:
+                    self.selectionModel().setCurrentIndex(index, QtCore.QItemSelectionModel.NoUpdate)
+                else:
+                    self.selectionModel().select(
+                        index,
+                        QtCore.QItemSelectionModel.ClearAndSelect | QtCore.QItemSelectionModel.Rows,
+                    )
                 return
         super().mousePressEvent(event)
 
@@ -526,6 +529,26 @@ class FileListView(QtWidgets.QTableView):
             self._job_manager.move_jobs_up(ids)
         else:
             self._job_manager.move_jobs_down(ids)
+        QtCore.QTimer.singleShot(0, lambda ids=ids: self._restore_selection(ids))
+
+    def _restore_selection(self, job_ids: list[str]) -> None:
+        if not job_ids:
+            return
+        ids = set(job_ids)
+        model = self.selectionModel()
+        if model is None:
+            return
+        model.clearSelection()
+        first_index = None
+        for row in range(self._job_manager.job_count()):
+            job = self._job_manager.get_job(row)
+            if job.id in ids:
+                index = self._model.index(row, 0)
+                model.select(index, QtCore.QItemSelectionModel.Select | QtCore.QItemSelectionModel.Rows)
+                if first_index is None:
+                    first_index = index
+        if first_index is not None:
+            model.setCurrentIndex(first_index, QtCore.QItemSelectionModel.NoUpdate)
 
     def _can_move_selected(self) -> tuple[bool, bool]:
         rows = sorted({idx.row() for idx in self.selectionModel().selectedRows()})

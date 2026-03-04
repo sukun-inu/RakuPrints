@@ -300,6 +300,7 @@ class SettingsPanel(QtWidgets.QWidget):
         current = self.pdf_scale_mode_combo.currentData()
         with QtCore.QSignalBlocker(self.pdf_scale_mode_combo):
             self.pdf_scale_mode_combo.clear()
+            self.pdf_scale_mode_combo.addItem(t("pdf_scale_auto"), "auto")
             self.pdf_scale_mode_combo.addItem(t("pdf_scale_fit"), "fit")
             self.pdf_scale_mode_combo.addItem(t("pdf_scale_shrink"), "shrink")
             self.pdf_scale_mode_combo.addItem(t("pdf_scale_none"), "none")
