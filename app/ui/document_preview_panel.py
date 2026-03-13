@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import gc
 import os
 from pathlib import Path
+import signal
 import tempfile
+import threading
+import time
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
@@ -14,6 +18,131 @@ from app.model.print_job import FileType, PrintJob
 _IMAGE_CACHE_LIMIT = 120
 _FULLSCREEN_CACHE_LIMIT = 48
 _SCALED_ICON_CACHE_LIMIT = 520
+_BLOB_CACHE_LIMIT_ITEMS = 192
+_BLOB_CACHE_LIMIT_BYTES = 160 * 1024 * 1024
+_BLOB_IMAGE_FORMAT = "PNG"
+
+
+class _FirstPageBlobCache:
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._cache: dict[tuple[str, int, int, int], bytes] = {}
+        self._order: list[tuple[str, int, int, int]] = []
+        self._total_bytes = 0
+
+    @staticmethod
+    def _edge_bucket(target_long_edge: int) -> int:
+        try:
+            edge = int(target_long_edge)
+        except Exception:
+            edge = 640
+        edge = max(320, min(4096, edge))
+        return int(round(edge / 64.0) * 64)
+
+    @classmethod
+    def _cache_key(
+        cls,
+        signature: tuple[str, int, int],
+        target_long_edge: int,
+    ) -> tuple[str, int, int, int]:
+        return (
+            str(signature[0]),
+            int(signature[1]),
+            int(signature[2]),
+            cls._edge_bucket(target_long_edge),
+        )
+
+    def _touch_unlocked(self, key: tuple[str, int, int, int]) -> None:
+        try:
+            self._order.remove(key)
+        except ValueError:
+            pass
+        self._order.append(key)
+
+    def load_image(
+        self,
+        signature: tuple[str, int, int] | None,
+        target_long_edge: int,
+    ) -> QtGui.QImage | None:
+        if signature is None:
+            return None
+        key = self._cache_key(signature, target_long_edge)
+        with self._lock:
+            blob = self._cache.get(key)
+            if blob is None:
+                return None
+            self._touch_unlocked(key)
+            payload = bytes(blob)
+        image = QtGui.QImage.fromData(payload, _BLOB_IMAGE_FORMAT)
+        if image.isNull():
+            self.remove(signature, target_long_edge)
+            return None
+        return image
+
+    def remove(
+        self,
+        signature: tuple[str, int, int],
+        target_long_edge: int,
+    ) -> None:
+        key = self._cache_key(signature, target_long_edge)
+        with self._lock:
+            blob = self._cache.pop(key, None)
+            if blob is not None:
+                self._total_bytes = max(0, self._total_bytes - len(blob))
+            try:
+                self._order.remove(key)
+            except ValueError:
+                pass
+
+    def store_image(
+        self,
+        signature: tuple[str, int, int] | None,
+        target_long_edge: int,
+        image: QtGui.QImage | None,
+    ) -> None:
+        if signature is None or image is None or image.isNull():
+            return
+        encoded = QtCore.QByteArray()
+        buffer = QtCore.QBuffer(encoded)
+        if not buffer.open(QtCore.QIODevice.WriteOnly):
+            return
+        try:
+            if not image.save(buffer, _BLOB_IMAGE_FORMAT):
+                return
+        finally:
+            buffer.close()
+        payload = bytes(encoded)
+        if not payload:
+            return
+        key = self._cache_key(signature, target_long_edge)
+        with self._lock:
+            previous = self._cache.pop(key, None)
+            if previous is not None:
+                self._total_bytes = max(0, self._total_bytes - len(previous))
+            self._cache[key] = payload
+            self._total_bytes += len(payload)
+            self._touch_unlocked(key)
+            while self._order and (
+                len(self._order) > _BLOB_CACHE_LIMIT_ITEMS
+                or self._total_bytes > _BLOB_CACHE_LIMIT_BYTES
+            ):
+                oldest = self._order.pop(0)
+                oldest_blob = self._cache.pop(oldest, None)
+                if oldest_blob is not None:
+                    self._total_bytes = max(0, self._total_bytes - len(oldest_blob))
+
+    def clear(self) -> None:
+        with self._lock:
+            self._cache.clear()
+            self._order.clear()
+            self._total_bytes = 0
+
+
+_FIRST_PAGE_BLOB_CACHE = _FirstPageBlobCache()
+
+
+def clear_preview_blob_cache() -> None:
+    _FIRST_PAGE_BLOB_CACHE.clear()
 
 
 @dataclass(frozen=True)
@@ -129,22 +258,94 @@ def _render_pdf_preview(file_path: str, target_long_edge: int, fitz_module) -> Q
 
 
 def _render_request_preview(req: PreviewRequest, target_long_edge: int, fitz_module) -> QtGui.QImage | None:
+    cached = _FIRST_PAGE_BLOB_CACHE.load_image(req.signature, target_long_edge)
+    if cached is not None and not cached.isNull():
+        return cached
+
+    rendered_image: QtGui.QImage | None = None
     if req.file_type == FileType.PDF:
-        return _render_pdf_preview(req.file_path, target_long_edge, fitz_module)
-    if req.file_type not in {FileType.WORD, FileType.EXCEL, FileType.PPT}:
-        return None
-
-    exported_pdf = _export_office_to_pdf(req.file_path, req.file_type)
-    if not exported_pdf:
-        return None
-
-    try:
-        return _render_pdf_preview(exported_pdf, target_long_edge, fitz_module)
-    finally:
+        rendered_image = _render_pdf_preview(req.file_path, target_long_edge, fitz_module)
+    elif req.file_type in {FileType.WORD, FileType.EXCEL, FileType.PPT}:
+        exported_pdf = _export_office_to_pdf(req.file_path, req.file_type)
+        if not exported_pdf:
+            return None
         try:
-            os.remove(exported_pdf)
+            rendered_image = _render_pdf_preview(exported_pdf, target_long_edge, fitz_module)
+        finally:
+            try:
+                os.remove(exported_pdf)
+            except Exception:
+                pass
+    else:
+        return None
+
+    if rendered_image is not None and not rendered_image.isNull():
+        _FIRST_PAGE_BLOB_CACHE.store_image(req.signature, target_long_edge, rendered_image)
+    return rendered_image
+
+
+def _office_process_pid(app, win32process_module) -> int | None:
+    if app is None or win32process_module is None:
+        return None
+    hwnd = None
+    for attr in ("Hwnd", "HWND"):
+        try:
+            value = getattr(app, attr)
         except Exception:
-            pass
+            value = None
+        if value:
+            try:
+                hwnd = int(value)
+            except Exception:
+                hwnd = None
+            if hwnd and hwnd > 0:
+                break
+    if not hwnd:
+        return None
+    try:
+        _, pid = win32process_module.GetWindowThreadProcessId(hwnd)
+    except Exception:
+        return None
+    try:
+        pid_int = int(pid)
+    except Exception:
+        return None
+    return pid_int if pid_int > 0 else None
+
+
+def _is_process_alive(pid: int | None) -> bool:
+    if not pid or pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    except Exception:
+        return True
+    return True
+
+
+def _wait_office_exit_or_terminate(pid: int | None, timeout_seconds: float = 1.5) -> None:
+    if not pid or pid <= 0:
+        return
+    deadline = time.monotonic() + max(0.2, float(timeout_seconds))
+    while time.monotonic() < deadline:
+        if not _is_process_alive(pid):
+            return
+        time.sleep(0.05)
+    if not _is_process_alive(pid):
+        return
+    sigterm = getattr(signal, "SIGTERM", None)
+    if sigterm is None:
+        return
+    try:
+        os.kill(pid, sigterm)
+    except Exception:
+        pass
 
 
 def _export_office_to_pdf(file_path: str, file_type: FileType) -> str | None:
@@ -153,6 +354,10 @@ def _export_office_to_pdf(file_path: str, file_type: FileType) -> str | None:
         import win32com.client  # type: ignore
     except Exception:
         return None
+    try:
+        import win32process  # type: ignore
+    except Exception:
+        win32process = None
 
     tmp = tempfile.NamedTemporaryFile(prefix="raku_preview_", suffix=".pdf", delete=False)
     pdf_path = tmp.name
@@ -163,11 +368,13 @@ def _export_office_to_pdf(file_path: str, file_type: FileType) -> str | None:
     workbook = None
     presentation = None
     exported = False
+    app_pid: int | None = None
 
     pythoncom.CoInitialize()
     try:
         if file_type == FileType.WORD:
             app = win32com.client.DispatchEx("Word.Application")
+            app_pid = _office_process_pid(app, win32process)
             app.Visible = False
             if hasattr(app, "DisplayAlerts"):
                 app.DisplayAlerts = False
@@ -178,6 +385,7 @@ def _export_office_to_pdf(file_path: str, file_type: FileType) -> str | None:
 
         elif file_type == FileType.EXCEL:
             app = win32com.client.DispatchEx("Excel.Application")
+            app_pid = _office_process_pid(app, win32process)
             app.Visible = False
             if hasattr(app, "DisplayAlerts"):
                 app.DisplayAlerts = False
@@ -188,6 +396,7 @@ def _export_office_to_pdf(file_path: str, file_type: FileType) -> str | None:
 
         elif file_type == FileType.PPT:
             app = win32com.client.DispatchEx("PowerPoint.Application")
+            app_pid = _office_process_pid(app, win32process)
             app.Visible = False
             if hasattr(app, "DisplayAlerts"):
                 app.DisplayAlerts = False
@@ -224,7 +433,32 @@ def _export_office_to_pdf(file_path: str, file_type: FileType) -> str | None:
                 app.Quit()
         except Exception:
             pass
-        pythoncom.CoUninitialize()
+        try:
+            if doc is not None:
+                del doc
+        except Exception:
+            pass
+        try:
+            if workbook is not None:
+                del workbook
+        except Exception:
+            pass
+        try:
+            if presentation is not None:
+                del presentation
+        except Exception:
+            pass
+        try:
+            if app is not None:
+                del app
+        except Exception:
+            pass
+        gc.collect()
+        try:
+            pythoncom.CoUninitialize()
+        except Exception:
+            pass
+        _wait_office_exit_or_terminate(app_pid)
 
     try:
         if exported and Path(pdf_path).exists() and Path(pdf_path).stat().st_size > 0:
@@ -398,6 +632,7 @@ class DocumentPreviewPanel(QtWidgets.QWidget):
         self._request_token = 0
         self._worker: PdfPreviewWorker | None = None
         self._workers: set[PdfPreviewWorker] = set()
+        self._pending_jobs: list[PrintJob] | None = None
         self._fullscreen_worker: SinglePdfPreviewWorker | None = None
         self._fullscreen_dialog: FullscreenPreviewDialog | None = None
         self._fullscreen_job_id = ""
@@ -524,11 +759,46 @@ class DocumentPreviewPanel(QtWidgets.QWidget):
     def zoom_percent(self) -> int:
         return int(self.zoom_spin.value())
 
+    def release_cached_previews(self, clear_shared_blob_cache: bool = False) -> None:
+        self._request_token += 1
+        self._pending_jobs = None
+        self.loading_label.setText("")
+        self._cancel_list_worker()
+
+        for worker in list(self._workers):
+            if worker.isRunning():
+                worker.requestInterruption()
+        for worker in list(self._workers):
+            if worker.isRunning():
+                worker.wait(1200)
+        self._workers.clear()
+        self._worker = None
+
+        self._cancel_fullscreen_worker()
+        if self._fullscreen_dialog is not None:
+            self._fullscreen_dialog.close()
+            self._fullscreen_dialog = None
+        self._fullscreen_job_id = ""
+
+        self._jobs_by_id.clear()
+        self._items_by_job.clear()
+        self._images_by_job.clear()
+        self._image_cache.clear()
+        self._image_cache_order.clear()
+        self._fullscreen_cache.clear()
+        self._fullscreen_cache_order.clear()
+        self._scaled_icon_cache.clear()
+        self._scaled_icon_order.clear()
+
+        if clear_shared_blob_cache:
+            clear_preview_blob_cache()
+
     def set_jobs(self, jobs: list[PrintJob]) -> None:
+        requested_jobs = list(jobs)
+        worker_running = self._cancel_list_worker()
         self._selected_total = len(jobs)
         self._request_token += 1
         current_token = self._request_token
-        self._cancel_list_worker()
 
         self.preview_list.clear()
         self._jobs_by_id.clear()
@@ -537,13 +807,14 @@ class DocumentPreviewPanel(QtWidgets.QWidget):
         self.loading_label.setText("")
         self._update_summary()
 
-        if not jobs:
+        if not requested_jobs:
+            self._pending_jobs = None
             self._show_empty()
             return
 
         self.stack.setCurrentWidget(self.preview_list)
         render_requests: list[PreviewRequest] = []
-        shown_jobs = jobs[: self._max_items]
+        shown_jobs = requested_jobs[: self._max_items]
 
         for job in shown_jobs:
             self._jobs_by_id[job.id] = job
@@ -575,31 +846,31 @@ class DocumentPreviewPanel(QtWidgets.QWidget):
         self._update_summary()
         self._schedule_layout_refresh(immediate=True)
 
-        if render_requests:
+        if not render_requests:
+            self._pending_jobs = None
+            return
+
+        if worker_running:
+            self._pending_jobs = requested_jobs
             self.loading_label.setText(t("preview_loading"))
-            worker = PdfPreviewWorker(render_requests, current_token)
-            self._workers.add(worker)
-            worker.thumbnail_ready.connect(self._on_thumbnail_ready)
-            worker.batch_finished.connect(self._on_batch_finished)
-            worker.finished.connect(lambda w=worker: self._on_list_worker_finished(w))
-            self._worker = worker
-            worker.start()
+            return
+
+        self._pending_jobs = None
+        self.loading_label.setText(t("preview_loading"))
+        worker = PdfPreviewWorker(render_requests, current_token)
+        self._workers.add(worker)
+        worker.thumbnail_ready.connect(self._on_thumbnail_ready)
+        worker.batch_finished.connect(self._on_batch_finished)
+        worker.finished.connect(lambda w=worker: self._on_list_worker_finished(w))
+        self._worker = worker
+        worker.start()
 
     def resizeEvent(self, event: QtGui.QResizeEvent) -> None:
         super().resizeEvent(event)
         self._schedule_layout_refresh(immediate=False)
 
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
-        for worker in list(self._workers):
-            if worker.isRunning():
-                worker.requestInterruption()
-        for worker in list(self._workers):
-            if worker.isRunning():
-                worker.wait(1200)
-        self._cancel_fullscreen_worker()
-        if self._fullscreen_dialog is not None:
-            self._fullscreen_dialog.close()
-            self._fullscreen_dialog = None
+        self.release_cached_previews(clear_shared_blob_cache=False)
         super().closeEvent(event)
 
     def _on_mode_changed(self) -> None:
@@ -822,16 +1093,27 @@ class DocumentPreviewPanel(QtWidgets.QWidget):
         if self._worker and not self._worker.isRunning():
             self._worker = None
 
-    def _cancel_list_worker(self) -> None:
-        if self._worker and self._worker.isRunning():
+    def _cancel_list_worker(self) -> bool:
+        if self._worker is None:
+            return False
+        if self._worker.isRunning():
             self._worker.requestInterruption()
+            return True
         self._worker = None
+        return False
 
     def _on_list_worker_finished(self, worker: PdfPreviewWorker) -> None:
         self._workers.discard(worker)
         if self._worker is worker:
             self._worker = None
         worker.deleteLater()
+        if self._worker is not None:
+            return
+        pending_jobs = self._pending_jobs
+        if pending_jobs is None:
+            return
+        self._pending_jobs = None
+        self.set_jobs(list(pending_jobs))
 
     def _on_item_double_clicked(self, item: QtWidgets.QListWidgetItem) -> None:
         data = item.data(QtCore.Qt.UserRole)
@@ -881,7 +1163,8 @@ class DocumentPreviewPanel(QtWidgets.QWidget):
                     self._fullscreen_dialog.set_status("")
                 return
 
-        self._cancel_fullscreen_worker()
+        if not self._cancel_fullscreen_worker():
+            return
         edge = self._fullscreen_target_edge()
         worker = SinglePdfPreviewWorker(
             job_id=job.id,
@@ -919,9 +1202,9 @@ class DocumentPreviewPanel(QtWidgets.QWidget):
             self._fullscreen_dialog.set_image(image)
             self._fullscreen_dialog.set_status("")
 
-    def _cancel_fullscreen_worker(self) -> None:
+    def _cancel_fullscreen_worker(self) -> bool:
         if self._fullscreen_worker is None:
-            return
+            return True
         worker = self._fullscreen_worker
         self._fullscreen_worker = None
         if worker.isRunning():
@@ -929,7 +1212,7 @@ class DocumentPreviewPanel(QtWidgets.QWidget):
             if not worker.wait(2000):
                 # Keep ownership until it actually finishes to avoid deleting a running QThread.
                 self._fullscreen_worker = worker
-                return
+                return False
         try:
             worker.finished.disconnect()
         except Exception:
@@ -939,6 +1222,7 @@ class DocumentPreviewPanel(QtWidgets.QWidget):
         except Exception:
             pass
         worker.deleteLater()
+        return True
 
     def _on_fullscreen_worker_finished(self, worker: SinglePdfPreviewWorker) -> None:
         if self._fullscreen_worker is worker:
