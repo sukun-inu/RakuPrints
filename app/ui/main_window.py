@@ -1005,6 +1005,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self._ignore_preview_window_close = True
             self._preview_window.close()
             self._ignore_preview_window_close = False
+        self.preview_panel.release_cached_previews(clear_shared_blob_cache=True)
         super().closeEvent(event)
 
     def _set_taskbar_total(self, total: int) -> None:
