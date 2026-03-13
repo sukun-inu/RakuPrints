@@ -7,7 +7,6 @@ import re
 import subprocess
 import sys
 import tempfile
-import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -15,6 +14,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 
 from app.app_context import AppContext
 from app.i18n import t
+from app.net.http_utils import urlopen
 from app.version import __version__
 from app.ui.update_prompt_dialog import UpdatePromptDialog
 
@@ -68,7 +68,14 @@ class UpdateChecker(QtCore.QThread):
     def run(self) -> None:
         try:
             url = GITHUB_API.format(slug=REPO_SLUG)
-            with urllib.request.urlopen(url, timeout=10) as response:
+            with urlopen(
+                url,
+                timeout=10,
+                headers={
+                    "Accept": "application/vnd.github+json",
+                    "User-Agent": "RakuPrints",
+                },
+            ) as response:
                 payload = json.loads(response.read().decode("utf-8"))
             tag = str(payload.get("tag_name") or "")
             html_url = str(payload.get("html_url") or "")
@@ -114,7 +121,7 @@ class UpdateDownloader(QtCore.QThread):
             temp_dir = Path(tempfile.mkdtemp(prefix="rakuprint_update_"))
             file_name = str(asset.get("name") or "RakuPrint_Setup.exe")
             file_path = temp_dir / file_name
-            with urllib.request.urlopen(download_url, timeout=120) as response:
+            with urlopen(download_url, timeout=120, headers={"User-Agent": "RakuPrints"}) as response:
                 file_path.write_bytes(response.read())
 
             self.finished_download.emit(True, str(file_path), "")

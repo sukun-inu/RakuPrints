@@ -32,11 +32,15 @@ from app.ui.excel_sheet_selector import ExcelSheetSelectorDialog
 from app.ui.excel_orientation_dialog import ExcelOrientationDialog
 from app.ui.pdf_options_dialog import PdfOptionsDialog
 from app.ui.usage_dialog import UsageDialog
+from app.ui.document_preview_panel import DocumentPreviewPanel
+from app.ui.preview_window import PreviewWindow
 from app.controller.excel_orientation_analyzer import ExcelOrientationAnalyzer
 from app.i18n import t, set_language, resolve_language
 
 
 class MainWindow(QtWidgets.QMainWindow):
+    _SPLITTER_SIZES_DEFAULT = [980, 360]
+
     def __init__(self, context: AppContext, job_manager: JobManager) -> None:
         super().__init__()
         self._context = context
@@ -50,6 +54,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self._taskbar_button = None
         self._taskbar_progress = None
         self._update_manager = UpdateManager(context, self)
+        self._preview_window: PreviewWindow | None = None
+        self._ignore_preview_window_close = False
+        self._closing_main_window = False
 
         # Prefer a 16:9 friendly starting size and require at least 1366x768
         self.resize(1366, 768)
@@ -61,12 +68,16 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Apply language first to ensure UI elements are properly initialized
         self._apply_language()
-        
+
+        # Always start with preview window hidden.
+        self._context.settings.preview_visible = False
+
         self._refresh_settings()
         self._load_printers()
         self._refresh_rules()
         self._update_status()
         self._update_selection_actions()
+        self._refresh_preview_selection()
 
         QtCore.QTimer.singleShot(600, self._update_manager.check_on_startup)
 
@@ -89,6 +100,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.move_up_action = QtGui.QAction(self)
         self.move_down_action = QtGui.QAction(self)
         self.delete_action = QtGui.QAction(self)
+        self.preview_toggle_action = QtGui.QAction(self)
+        self.preview_toggle_action.setCheckable(True)
 
         self.usage_action = QtGui.QAction(self)
         self.about_action = QtGui.QAction(self)
@@ -103,6 +116,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.printer_selected_action.setShortcut(QtGui.QKeySequence("Ctrl+Shift+P"))
         self.pdf_options_action.setShortcut(QtGui.QKeySequence("Ctrl+Alt+P"))
         self.excel_sheets_action.setShortcut(QtGui.QKeySequence("Ctrl+Alt+E"))
+        self.preview_toggle_action.setShortcut(QtGui.QKeySequence("Ctrl+Shift+V"))
         self.usage_action.setShortcut(QtGui.QKeySequence.HelpContents)
 
         self.add_files_action.triggered.connect(self._on_add_files)
@@ -119,6 +133,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.move_up_action.triggered.connect(lambda: self.file_list.move_selected(-1))
         self.move_down_action.triggered.connect(lambda: self.file_list.move_selected(1))
         self.delete_action.triggered.connect(lambda: self.file_list.confirm_and_remove_selected())
+        self.preview_toggle_action.triggered.connect(self._on_preview_toggle_changed)
 
         self.usage_action.triggered.connect(self._on_usage)
         self.about_action.triggered.connect(self._on_about)
@@ -129,6 +144,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.file_menu.addAction(self.add_folder_action)
         self.file_menu.addAction(self.apply_rules_action)
         self.file_menu.addAction(self.apply_rules_force_action)
+        self.file_menu.addAction(self.preview_toggle_action)
         self.file_menu.addSeparator()
         self.file_menu.addAction(self.exit_action)
 
@@ -139,21 +155,23 @@ class MainWindow(QtWidgets.QMainWindow):
         self.help_menu.addAction(self.check_updates_action)
 
     def _build_layout(self) -> None:
-        splitter = QtWidgets.QSplitter()
-        splitter.setOrientation(QtCore.Qt.Horizontal)
+        self.main_splitter = QtWidgets.QSplitter()
+        self.main_splitter.setOrientation(QtCore.Qt.Horizontal)
 
         self.file_list = FileListView(self._job_manager)
         self.file_list.apply_column_widths(self._context.settings.file_list_column_widths)
+        self.preview_panel = DocumentPreviewPanel(
+            preview_zoom_mode=self._context.settings.preview_zoom_mode,
+            preview_zoom_percent=self._context.settings.preview_zoom_percent,
+        )
         self.settings_panel = SettingsPanel()
 
-        splitter.addWidget(self.file_list)
-        splitter.addWidget(self.settings_panel)
-        splitter.setStretchFactor(0, 5)
-        splitter.setStretchFactor(1, 1)
-        # Make settings panel occupy a fixed-ish area on the right and avoid
-        # compressing its contents at small widths.
-        splitter.setSizes([1046, 300])
-        splitter.setHandleWidth(1)
+        self.main_splitter.addWidget(self.file_list)
+        self.main_splitter.addWidget(self.settings_panel)
+        self.main_splitter.setStretchFactor(0, 7)
+        self.main_splitter.setStretchFactor(1, 3)
+        self.main_splitter.setSizes(list(self._SPLITTER_SIZES_DEFAULT))
+        self.main_splitter.setHandleWidth(1)
 
         central = QtWidgets.QWidget()
         central_layout = QtWidgets.QVBoxLayout(central)
@@ -163,6 +181,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.command_bar.setToolButtonStyle(QtCore.Qt.ToolButtonTextOnly)
         self.command_bar.addAction(self.add_files_action)
         self.command_bar.addAction(self.add_folder_action)
+        self.command_bar.addAction(self.preview_toggle_action)
         self.command_bar.addSeparator()
         self.command_bar.addAction(self.start_print_action)
         self.command_bar.addAction(self.print_selected_action)
@@ -176,9 +195,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.command_bar.addAction(self.pdf_options_action)
         self.command_bar.addAction(self.excel_sheets_action)
         central_layout.addWidget(self.command_bar)
-        central_layout.addWidget(splitter)
+        central_layout.addWidget(self.main_splitter)
 
         self.setCentralWidget(central)
+        self._apply_preview_state(
+            visible=self._context.settings.preview_visible,
+            persist=False,
+        )
 
     def _bind_signals(self) -> None:
         self.file_list.files_dropped.connect(self._job_manager.add_files)
@@ -188,7 +211,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.file_list.printer_selected_requested.connect(self._on_printer_selected)
         self.file_list.pdf_options_requested.connect(self._on_pdf_options_requested)
         self.file_list.column_widths_changed.connect(self._on_column_widths_changed)
-        self.file_list.selectionModel().selectionChanged.connect(lambda *_: self._update_selection_actions())
+        self.file_list.selectionModel().selectionChanged.connect(self._on_file_selection_changed)
+        self.preview_panel.zoom_mode_changed.connect(self._on_preview_zoom_mode_changed)
+        self.preview_panel.zoom_percent_changed.connect(self._on_preview_zoom_percent_changed)
 
         self.settings_panel.use_default_changed.connect(self._on_use_default_changed)
         self.settings_panel.select_printer_clicked.connect(self._on_global_printer_select)
@@ -215,6 +240,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._job_manager.jobs_changed.connect(self._update_status)
         self._job_manager.job_updated.connect(self._update_status)
         self._job_manager.jobs_changed.connect(self._update_selection_actions)
+        self._job_manager.jobs_changed.connect(self._refresh_preview_selection)
 
         self._context.rules_changed.connect(self._refresh_rules)
         self._context.settings_changed.connect(self._refresh_settings)
@@ -239,6 +265,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.move_up_action.setText(t("action_move_up"))
         self.move_down_action.setText(t("action_move_down"))
         self.delete_action.setText(t("action_delete_selected"))
+        self.preview_toggle_action.setText(t("action_toggle_preview"))
 
         self.usage_action.setText(t("action_usage"))
         self.about_action.setText(t("action_about"))
@@ -247,6 +274,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.settings_panel.retranslate()
         self.file_list.retranslate()
+        self.preview_panel.retranslate()
+        if self._preview_window:
+            self._preview_window.setWindowTitle(t("preview_title"))
         self._refresh_rules()
         self._refresh_paper_sizes()
         if self._progress_dialog:
@@ -272,8 +302,14 @@ class MainWindow(QtWidgets.QMainWindow):
             update_check_enabled=settings.update_check_enabled,
             auto_update_enabled=settings.auto_update_enabled,
         )
+        self.preview_panel.set_zoom(settings.preview_zoom_mode, settings.preview_zoom_percent)
+        self._apply_preview_state(
+            visible=settings.preview_visible,
+            persist=False,
+        )
         self._refresh_paper_sizes()
         self._refresh_rules()
+        self._refresh_preview_selection()
 
     def _refresh_rules(self) -> None:
         self.settings_panel.set_printers(self._printers)
@@ -286,6 +322,15 @@ class MainWindow(QtWidgets.QMainWindow):
         completed = sum(1 for job in self._job_manager.jobs() if job.status == JobStatus.SUCCESS)
         self.statusBar().showMessage(t("status_jobs_fmt", total=total, completed=completed, failed=failed))
         self.retry_failed_action.setEnabled(failed > 0 and not (self._executor and self._executor.isRunning()))
+
+    def _on_file_selection_changed(self, *_args) -> None:
+        self._update_selection_actions()
+        self._refresh_preview_selection()
+
+    def _refresh_preview_selection(self, *_args) -> None:
+        if not self.preview_toggle_action.isChecked():
+            return
+        self.preview_panel.set_jobs(self.file_list.selected_jobs())
 
     def _update_selection_actions(self) -> None:
         if not self.file_list.isEnabled():
@@ -529,6 +574,80 @@ class MainWindow(QtWidgets.QMainWindow):
     def _on_auto_update_changed(self, enabled: bool) -> None:
         self._context.update_setting(auto_update_enabled=enabled)
 
+    def _on_preview_toggle_changed(self, checked: bool) -> None:
+        self._apply_preview_state(visible=checked, persist=True)
+
+    def _apply_preview_state(self, visible: bool, persist: bool) -> None:
+        visible = bool(visible)
+
+        with QtCore.QSignalBlocker(self.preview_toggle_action):
+            self.preview_toggle_action.setChecked(visible)
+
+        if visible:
+            self._move_preview_to_window()
+            if self._preview_window:
+                self._preview_window.show()
+                self._preview_window.raise_()
+                self._preview_window.activateWindow()
+            self._refresh_preview_selection()
+        else:
+            if self._preview_window:
+                self._preview_window.hide()
+            self.preview_panel.set_jobs([])
+
+        if not persist:
+            return
+        updates: dict[str, object] = {}
+        settings = self._context.settings
+        if settings.preview_visible != visible:
+            updates["preview_visible"] = visible
+        if updates:
+            self._context.update_setting(**updates)
+
+    def _move_preview_to_window(self) -> None:
+        self._ensure_preview_window()
+        if not self._preview_window:
+            return
+        if self._preview_window.centralWidget() is self.preview_panel:
+            return
+        self._detach_preview_panel_from_parent()
+        self._preview_window.setCentralWidget(self.preview_panel)
+        self._preview_window.setWindowTitle(t("preview_title"))
+        self.preview_panel.show()
+
+    def _detach_preview_panel_from_parent(self) -> None:
+        parent = self.preview_panel.parentWidget()
+        if parent is None:
+            return
+        parent_layout = parent.layout()
+        if parent_layout is not None:
+            parent_layout.removeWidget(self.preview_panel)
+        self.preview_panel.setParent(None)
+
+    def _ensure_preview_window(self) -> None:
+        if self._preview_window:
+            return
+        self._preview_window = PreviewWindow(self)
+        self._preview_window.setWindowTitle(t("preview_title"))
+        self._preview_window.closed.connect(self._on_preview_window_closed)
+
+    def _on_preview_window_closed(self) -> None:
+        if self._closing_main_window or self._ignore_preview_window_close:
+            return
+        if not self.preview_toggle_action.isChecked():
+            return
+        self._apply_preview_state(visible=False, persist=True)
+
+    def _on_preview_zoom_mode_changed(self, mode: str) -> None:
+        if mode == self._context.settings.preview_zoom_mode:
+            return
+        self._context.update_setting(preview_zoom_mode=mode)
+
+    def _on_preview_zoom_percent_changed(self, value: int) -> None:
+        if value == self._context.settings.preview_zoom_percent:
+            return
+        self._context.update_setting(preview_zoom_percent=value)
+
     def _on_open_printer_settings(self) -> None:
         settings = self._context.settings
         printer_name = ""
@@ -743,6 +862,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _lock_ui(self, locked: bool) -> None:
         self.file_list.setEnabled(not locked)
+        self.preview_panel.setEnabled(not locked)
         self.settings_panel.setEnabled(not locked)
         self.command_bar.setEnabled(not locked)
         self.menuBar().setEnabled(not locked)
@@ -880,6 +1000,11 @@ class MainWindow(QtWidgets.QMainWindow):
             )
             event.ignore()
             return
+        self._closing_main_window = True
+        if self._preview_window:
+            self._ignore_preview_window_close = True
+            self._preview_window.close()
+            self._ignore_preview_window_close = False
         super().closeEvent(event)
 
     def _set_taskbar_total(self, total: int) -> None:

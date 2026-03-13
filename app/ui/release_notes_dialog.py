@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import json
-import urllib.request
 from dataclasses import dataclass
 from typing import List
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from app.i18n import t
+from app.net.http_utils import urlopen
 
 
 REPO_SLUG = "sukun-inu/RakuPrints"
@@ -29,14 +29,14 @@ class ReleaseNotesFetcher(QtCore.QThread):
     def run(self) -> None:
         try:
             url = GITHUB_RELEASES_API.format(slug=REPO_SLUG)
-            request = urllib.request.Request(
+            with urlopen(
                 url,
+                timeout=12,
                 headers={
                     "Accept": "application/vnd.github+json",
                     "User-Agent": "RakuPrints",
                 },
-            )
-            with urllib.request.urlopen(request, timeout=12) as response:
+            ) as response:
                 payload = json.loads(response.read().decode("utf-8"))
             notes: list[ReleaseNote] = []
             if isinstance(payload, list):

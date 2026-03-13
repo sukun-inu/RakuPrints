@@ -28,6 +28,8 @@ a = Analysis(
         'fitz.fitz',
         'fitz._fitz',
         'fitz.utils',
+        'certifi',
+        'certifi_win32',
     ],
     hookspath=[],
     hooksconfig={},
