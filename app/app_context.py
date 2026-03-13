@@ -43,6 +43,9 @@ class UserSettings:
     update_snooze_until: str = ""
     last_update_check: str = ""
     file_list_column_widths: list[int] = field(default_factory=list)
+    preview_visible: bool = False
+    preview_zoom_mode: str = "fit"
+    preview_zoom_percent: int = 100
 
     def to_dict(self) -> dict:
         return {
@@ -65,6 +68,9 @@ class UserSettings:
             "update_snooze_until": self.update_snooze_until,
             "last_update_check": self.last_update_check,
             "file_list_column_widths": self.file_list_column_widths,
+            "preview_visible": self.preview_visible,
+            "preview_zoom_mode": self.preview_zoom_mode,
+            "preview_zoom_percent": self.preview_zoom_percent,
         }
 
     @classmethod
@@ -103,6 +109,15 @@ class UserSettings:
             scale_percent = 100
         if scale_percent <= 0:
             scale_percent = 100
+        preview_zoom_mode = str(data.get("preview_zoom_mode", "fit")).lower()
+        if preview_zoom_mode not in {"fit", "custom"}:
+            preview_zoom_mode = "fit"
+        preview_zoom_percent_raw = data.get("preview_zoom_percent", 100)
+        try:
+            preview_zoom_percent = int(preview_zoom_percent_raw)
+        except (TypeError, ValueError):
+            preview_zoom_percent = 100
+        preview_zoom_percent = max(25, min(400, preview_zoom_percent))
         printer_scale_raw = data.get("pdf_printer_scale", {})
         printer_scale: dict[str, int] = {}
         if isinstance(printer_scale_raw, dict):
@@ -141,6 +156,9 @@ class UserSettings:
             update_snooze_until=str(data.get("update_snooze_until", "")),
             last_update_check=str(data.get("last_update_check", "")),
             file_list_column_widths=widths,
+            preview_visible=bool(data.get("preview_visible", False)),
+            preview_zoom_mode=preview_zoom_mode,
+            preview_zoom_percent=preview_zoom_percent,
         )
 
 
