@@ -7,6 +7,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
+$VenvPython = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
+$InstallerScript = Join-Path $ProjectRoot "installer.iss"
 
 Push-Location $ProjectRoot
 try {
@@ -19,7 +21,10 @@ try {
 
     # Build with PyInstaller
     Write-Host "`n[2/3] Building with PyInstaller..." -ForegroundColor Yellow
-    python -m PyInstaller "RakuPrint.spec" --noconfirm
+    if (-not (Test-Path $VenvPython)) {
+        throw "Virtual environment python not found: $VenvPython"
+    }
+    & $VenvPython -m PyInstaller "RakuPrint.spec" --noconfirm
 
     if ($LASTEXITCODE -ne 0) {
         Write-Host "PyInstaller build failed!" -ForegroundColor Red
@@ -37,11 +42,14 @@ try {
         }
         
         if (Test-Path $iscc) {
-            & $iscc "installer.iss"
+            if (-not (Test-Path $InstallerScript)) {
+                throw "Installer script not found: $InstallerScript"
+            }
+            & $iscc $InstallerScript
             if ($LASTEXITCODE -eq 0) {
                 Write-Host "Installer build completed!" -ForegroundColor Green
             } else {
-                Write-Host "Installer build failed!" -ForegroundColor Red
+                throw "Installer build failed! (ISCC exit code: $LASTEXITCODE)"
             }
         } else {
             Write-Host "Inno Setup not found. Skipping installer build." -ForegroundColor Yellow
