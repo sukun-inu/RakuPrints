@@ -48,6 +48,14 @@ try {
             & $iscc $InstallerScript
             if ($LASTEXITCODE -eq 0) {
                 Write-Host "Installer build completed!" -ForegroundColor Green
+
+                # Generate SHA256SUMS.txt for integrity verification
+                $installerExe = Get-ChildItem "installer_output\*.exe" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+                if ($installerExe) {
+                    $hash = & $VenvPython -c "import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" $installerExe.FullName
+                    "$hash  $($installerExe.Name)" | Out-File -FilePath "installer_output\SHA256SUMS.txt" -Encoding utf8 -NoNewline
+                    Write-Host "SHA256SUMS.txt generated: $hash" -ForegroundColor Green
+                }
             } else {
                 throw "Installer build failed! (ISCC exit code: $LASTEXITCODE)"
             }
@@ -64,6 +72,9 @@ try {
     Write-Host "  dist\RakuPrint\RakuPrint.exe" -ForegroundColor Gray
     if (-not $SkipInstaller) {
         Write-Host "  installer_output\RakuPrint_Setup_*.exe" -ForegroundColor Gray
+        Write-Host "  installer_output\SHA256SUMS.txt" -ForegroundColor Gray
+        Write-Host "" -ForegroundColor White
+        Write-Host "Upload both files to the GitHub release." -ForegroundColor Yellow
     }
 }
 finally {

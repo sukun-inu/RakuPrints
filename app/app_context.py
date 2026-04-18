@@ -247,6 +247,10 @@ class AppContext(QtCore.QObject):
                 setattr(self.settings, key, value)
         self.save_settings()
 
+    @property
+    def data_dir(self) -> Path:
+        return self._config_dir.parent
+
     def update_rule(self, extension: str, printer: str) -> None:
         self.rules[extension.lower()] = {"printer": printer}
         self.save_rules()
