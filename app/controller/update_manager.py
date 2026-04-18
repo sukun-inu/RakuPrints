@@ -178,41 +178,6 @@ class UpdateManager(QtCore.QObject):
         self._checker: UpdateChecker | None = None
         self._downloader: UpdateDownloader | None = None
         self._progress: QtWidgets.QProgressDialog | None = None
-        self.last_notified = self._load_last_notified()
-
-    def _notify_path(self) -> Path:
-        return self._context.data_dir / "last_update_notify.txt"
-
-    def _load_last_notified(self) -> dt.datetime | None:
-        path = self._notify_path()
-        if path.exists():
-            try:
-                with path.open("r", encoding="utf-8") as file:
-                    return _iso_parse(file.read().strip())
-            except Exception:
-                return None
-        return None
-
-    def _save_last_notified(self, timestamp: dt.datetime) -> None:
-        path = self._notify_path()
-        try:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            with path.open("w", encoding="utf-8") as file:
-                file.write(timestamp.isoformat())
-        except Exception:
-            pass
-
-    def should_notify(self) -> bool:
-        """Check if the user should be notified about updates."""
-        if not self.last_notified:
-            return True
-        return dt.datetime.utcnow() >= self.last_notified + dt.timedelta(days=14)
-
-    def notify_user(self, update_info: UpdateInfo) -> None:
-        """Notify the user about the update."""
-        if self.should_notify():
-            # Emit a signal or show a dialog to notify the user
-            self._save_last_notified(dt.datetime.utcnow())
 
     def check_on_startup(self) -> None:
         settings = self._context.settings
@@ -258,9 +223,6 @@ class UpdateManager(QtCore.QObject):
                     t("msg_update_none"),
                 )
             return
-        if self._context.settings.auto_update_enabled and not manual:
-            self._download_update(info)
-            return
         self._prompt_update(info)
 
     def _prompt_update(self, info: UpdateInfo) -> None:
@@ -268,8 +230,8 @@ class UpdateManager(QtCore.QObject):
         if result.update_now:
             self._download_update(info)
             return
-        if result.snooze:
-            self._context.update_setting(update_snooze_until=_iso_plus_days(7))
+        days = 7 if result.snooze else 1
+        self._context.update_setting(update_snooze_until=_iso_plus_days(days))
 
     def _download_update(self, info: UpdateInfo) -> None:
         if self._downloader and self._downloader.isRunning():
