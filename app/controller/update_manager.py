@@ -258,9 +258,6 @@ class UpdateManager(QtCore.QObject):
                     t("msg_update_none"),
                 )
             return
-        if self._context.settings.auto_update_enabled and not manual:
-            self._download_update(info)
-            return
         self._prompt_update(info)
 
     def _prompt_update(self, info: UpdateInfo) -> None:
