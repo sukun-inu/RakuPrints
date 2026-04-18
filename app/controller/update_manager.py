@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import json
 import os
 import re
@@ -20,6 +21,14 @@ from app.ui.update_prompt_dialog import UpdatePromptDialog
 
 REPO_SLUG = "sukun-inu/RakuPrints"
 GITHUB_API = "https://api.github.com/repos/{slug}/releases/latest"
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest().lower()
 
 
 @dataclass
@@ -88,7 +97,8 @@ class UpdateChecker(QtCore.QThread):
 
 
 class UpdateDownloader(QtCore.QThread):
-    finished_download = QtCore.Signal(bool, str, str)
+    # hash_status: "verified" | "no_checksum" | "mismatch"
+    finished_download = QtCore.Signal(bool, str, str, str)
 
     def __init__(self, info: UpdateInfo, parent: QtCore.QObject | None = None) -> None:
         super().__init__(parent)
@@ -111,11 +121,11 @@ class UpdateDownloader(QtCore.QThread):
                         asset = item
                         break
             if not asset:
-                self.finished_download.emit(False, "", "No installer found")
+                self.finished_download.emit(False, "", "No installer found", "")
                 return
             download_url = str(asset.get("browser_download_url") or "")
             if not download_url:
-                self.finished_download.emit(False, "", "No download URL")
+                self.finished_download.emit(False, "", "No download URL", "")
                 return
 
             temp_dir = Path(tempfile.mkdtemp(prefix="rakuprint_update_"))
@@ -124,9 +134,40 @@ class UpdateDownloader(QtCore.QThread):
             with urlopen(download_url, timeout=120, headers={"User-Agent": "RakuPrints"}) as response:
                 file_path.write_bytes(response.read())
 
-            self.finished_download.emit(True, str(file_path), "")
+            hash_status = self._verify_hash(file_path)
+            self.finished_download.emit(True, str(file_path), "", hash_status)
         except Exception as exc:
-            self.finished_download.emit(False, "", str(exc))
+            self.finished_download.emit(False, "", str(exc), "")
+
+    def _verify_hash(self, file_path: Path) -> str:
+        """Returns "verified", "mismatch", or "no_checksum"."""
+        checksum_asset = None
+        for item in self._info.assets:
+            name = str(item.get("name") or "").upper()
+            if "SHA256" in name or name in ("SHA256SUMS", "SHA256SUMS.TXT", "CHECKSUMS.TXT"):
+                checksum_asset = item
+                break
+        if not checksum_asset:
+            return "no_checksum"
+        checksum_url = str(checksum_asset.get("browser_download_url") or "")
+        if not checksum_url:
+            return "no_checksum"
+        try:
+            with urlopen(checksum_url, timeout=30, headers={"User-Agent": "RakuPrints"}) as r:
+                checksum_text = r.read().decode("utf-8")
+        except Exception:
+            return "no_checksum"
+        installer_name = file_path.name.lower()
+        expected_hash = None
+        for line in checksum_text.splitlines():
+            parts = line.strip().split()
+            if len(parts) >= 2 and parts[1].lower().lstrip("*") == installer_name:
+                expected_hash = parts[0].lower()
+                break
+        if not expected_hash:
+            return "no_checksum"
+        actual_hash = _sha256_file(file_path)
+        return "verified" if actual_hash == expected_hash else "mismatch"
 
 
 class UpdateManager(QtCore.QObject):
@@ -139,19 +180,27 @@ class UpdateManager(QtCore.QObject):
         self._progress: QtWidgets.QProgressDialog | None = None
         self.last_notified = self._load_last_notified()
 
+    def _notify_path(self) -> Path:
+        return self._context.data_dir / "last_update_notify.txt"
+
     def _load_last_notified(self) -> dt.datetime | None:
-        """Load the last notification timestamp from a file."""
-        path = Path(tempfile.gettempdir()) / "last_update_notify.txt"
+        path = self._notify_path()
         if path.exists():
-            with path.open("r", encoding="utf-8") as file:
-                return _iso_parse(file.read().strip())
+            try:
+                with path.open("r", encoding="utf-8") as file:
+                    return _iso_parse(file.read().strip())
+            except Exception:
+                return None
         return None
 
     def _save_last_notified(self, timestamp: dt.datetime) -> None:
-        """Save the last notification timestamp to a file."""
-        path = Path(tempfile.gettempdir()) / "last_update_notify.txt"
-        with path.open("w", encoding="utf-8") as file:
-            file.write(timestamp.isoformat())
+        path = self._notify_path()
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("w", encoding="utf-8") as file:
+                file.write(timestamp.isoformat())
+        except Exception:
+            pass
 
     def should_notify(self) -> bool:
         """Check if the user should be notified about updates."""
@@ -235,7 +284,7 @@ class UpdateManager(QtCore.QObject):
         self._downloader.finished_download.connect(self._on_download_finished)
         self._downloader.start()
 
-    def _on_download_finished(self, success: bool, installer_path: str, error: str) -> None:
+    def _on_download_finished(self, success: bool, installer_path: str, error: str, hash_status: str) -> None:
         if self._progress:
             self._progress.close()
             self._progress = None
@@ -254,6 +303,24 @@ class UpdateManager(QtCore.QObject):
             )
             return
 
+        if hash_status == "mismatch":
+            QtWidgets.QMessageBox.critical(
+                self._parent,
+                t("title_update"),
+                t("msg_update_hash_mismatch"),
+            )
+            return
+
+        if hash_status == "no_checksum":
+            answer = QtWidgets.QMessageBox.warning(
+                self._parent,
+                t("title_update"),
+                t("msg_update_hash_no_checksum"),
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+            )
+            if answer != QtWidgets.QMessageBox.Yes:
+                return
+
         # Ask user to run installer
         result = QtWidgets.QMessageBox.question(
             self._parent,
@@ -266,7 +333,7 @@ class UpdateManager(QtCore.QObject):
 
         try:
             # Run installer and quit app
-            subprocess.Popen([installer_path], shell=True)
+            subprocess.Popen([installer_path])
             QtCore.QTimer.singleShot(500, QtWidgets.QApplication.quit)
         except Exception as exc:
             QtWidgets.QMessageBox.warning(
