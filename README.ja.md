@@ -1,47 +1,42 @@
-# らーく印刷 (RakuPrint)
+# らーく印刷 (RakuPrints)
 
 <img src="assets/icon.png" width="80">
 
-**Version: 0.3.0**
+たくさんのファイルをまとめて印刷するための Windows アプリです。
 
-**※ Excel・Word・PowerPointファイルの印刷には Microsoft Office が必須です（PDF印刷は不要）**
+PDF・Excel・Word・PowerPoint が混ざっていても、1つずつ開いて印刷する必要はありません。
+ファイルをまとめてドラッグ＆ドロップすれば、あとは印刷開始を押すだけです。
 
-Windows向けの一括印刷アプリケーション。PDF、Excel、Word、PowerPointファイルをまとめて印刷できます。
+ファイルの種類ごとに**使うプリンターや両面印刷の設定を自動で切り替え**、Excel は
+用紙の向き（縦・横）も中身を見て判断します。印刷する前に仕上がりを確認できるので、
+設定を間違えたまま大量に刷ってしまう事故も防げます。
+
+> **導入実績 —** 自動車整備店の車検証等の印刷業務に導入。Adobe Acrobat による手作業
+> （約170枚/日・50分以上）を**約5分**に短縮し、日次運用中。
 
 English: [README.md](README.md)
 
-> **導入実績 —** 自動車整備店の車検証等の印刷業務に導入。Adobe Acrobat による手作業（約170枚/日・50分以上）を**約5分**に短縮し、日次運用中。
+## できること
 
-## 📥 インストール
+- PDF・Excel・Word・PowerPoint の一括印刷
+- ファイル種別ごとのプリンター自動切替、両面印刷などの設定
+- Excel の用紙向き（縦・横）の自動判定
+- 印刷前プレビューによる刷り間違いの防止
+- 印刷の進捗・結果の表示、エラーのログ出力
+- ドラッグ＆ドロップ操作、日本語／英語UI、ダーク／ライトテーマ
 
-### ユーザー向け
-[Releases](https://github.com/sukun-inu/RakuPrints/releases) から `RakuPrint_Setup_x.x.x.exe` をダウンロードして実行してください。
+## 使うには
 
-## こんな方におすすめ
-- 仕事や学校で大量のPDFやOfficeファイルをまとめて印刷したい
-- ファイルごとにプリンターや両面印刷設定を自動で切り替えたい
-- Excelの用紙向き（縦横）を自動判定して無駄な印刷を減らしたい
-- ドラッグ＆ドロップで簡単に操作したい
-- 日本語・英語など多言語UIで使いたい
+[Releases](https://github.com/sukun-inu/RakuPrints/releases) から
+`RakuPrint_Setup_x.x.x.exe` をダウンロードして実行してください。
 
-## 概要
-「らーく印刷」は、PDF・Excel・Word・PowerPointなど様々なファイルを一括で印刷できるWindowsアプリです。ファイルを画面にドラッグ＆ドロップするだけで、印刷ジョブが自動で作成されます。拡張子ごとにプリンターや両面印刷などのルールを設定でき、Excelは自動で用紙向きを判定。印刷進捗や結果も画面で確認できます。
+1. アプリを起動する
+2. 印刷したいファイルをドラッグ＆ドロップする
+3. 必要ならプリンターや両面印刷を設定する
+4. 「印刷開始」を押す
 
-## 主なメリット
-- 手作業で1つずつ開いて印刷する必要なし
-- プリンターや設定の自動切り替えでミス防止
-- 印刷状況やエラーも一目でわかる
-- ダーク/ライトテーマや多言語対応
-
-## 基本操作
-1. 🚀 アプリを起動
-2. 📂 印刷したいファイルをドラッグ＆ドロップ
-3. 🖨️ 必要に応じてプリンターや両面印刷など設定
-4. ▶️ 「印刷開始」ボタンを押すだけ
-
----
-
----
+**Excel・Word・PowerPoint の印刷には Microsoft Office が必要です。**
+PDF だけなら Office は要りません。
 
 ## ドキュメント
 
@@ -51,11 +46,7 @@ English: [README.md](README.md)
 | [docs/ARCHITECTURE.ja.md](docs/ARCHITECTURE.ja.md) | 機能概要、アーキテクチャ、データフロー |
 | [docs/DEVELOPMENT.ja.md](docs/DEVELOPMENT.ja.md) | ビルド・実行方法、設定ファイル、開発・貢献 |
 
----
-
 ## ライセンス
-MIT License
-詳しくは [LICENSE](LICENSE) をご参照ください。
-Copyright (c) 2026 Hibiki Suzuki
 
----
+MIT License. Copyright (c) 2026 Hibiki Suzuki
+詳しくは [LICENSE](LICENSE) を参照してください。
