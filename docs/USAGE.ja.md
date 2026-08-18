@@ -1,6 +1,6 @@
 # 使い方
 
-[← README に戻る](../README.md)
+[← README.ja.md に戻る](../README.ja.md)
 
 ---
 
