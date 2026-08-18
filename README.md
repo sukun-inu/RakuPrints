@@ -9,6 +9,10 @@
 
 Windows向けの一括印刷アプリケーション。PDF、Excel、Word、PowerPointファイルをまとめて印刷できます。
 
+> **導入実績 —** 自動車整備店の車検証等の印刷業務に導入。Adobe Acrobat による手作業（約170枚/日・50分以上）を**約5分**に短縮し、日次運用中。
+>
+> **Impact —** Replaces a manual Adobe Acrobat workflow of ~170 documents/day taking 50+ minutes with one taking about 5 minutes. In daily production use.
+
 ## 📥 インストール
 
 ### ユーザー向け
